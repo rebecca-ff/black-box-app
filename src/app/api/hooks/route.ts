@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   const configured = !!process.env.KALODATA_API_KEY;
-  const hooks = await getTopHooks(category, range, 12);
+  const hooks = await getTopHooks(category);
   return Response.json({
     configured,
     category: category ?? null,

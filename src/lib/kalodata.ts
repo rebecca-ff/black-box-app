@@ -28,9 +28,8 @@ export async function getTopHooks(category?: string): Promise<string[]> {
     .eq("category", category)
     .maybeSingle();
   const hooks = data?.hooks;
-  return Array.isArray(hooks)
-    ? hooks.filter((h: unknown) => typeof h === "string").slice(0, 12)
-    : [];
+  if (!Array.isArray(hooks)) return [];
+  return hooks.filter((h: unknown): h is string => typeof h === "string").slice(0, 12);
 }
 
 // ── refresh path (slow — used by the daily cron / manual trigger) ─────────────
