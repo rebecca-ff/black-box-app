@@ -53,11 +53,26 @@ function parseHookList(text: string): string[] {
     .slice(0, 12);
 }
 
-export async function kalopilotTopHooks(category: string, timeoutMs = 280_000): Promise<string[]> {
-  const key = process.env.KALODATA_API_KEY;
-  if (!key) return [];
+// Brand category -> the TikTok Shop / Kalodata category term Kalopilot expects.
+// (A brand's "Wellness" maps to TikTok Shop's "Health", etc.)
+const CATEGORY_MAP: Record<string, string> = {
+  wellness: "Health",
+  health: "Health",
+  beauty: "Beauty & Personal Care",
+  pet: "Pet Supplies",
+  apparel: "Womenswear & Underwear",
+  garden: "Home Supplies",
+};
+function kaloCategoryTerm(category: string): string {
+  return CATEGORY_MAP[category.toLowerCase()] ?? category;
+}
+function hooksQuery(term: string): string {
+  return `From TikTok Shop US in the "${term}" category over the last 7 days, give me the 12 highest-performing video HOOKS — the opening line (spoken or on-screen text) that starts each top-revenue video. Return ONLY a JSON array of 12 short strings, each under 20 words. No prose, no markdown.`;
+}
 
-  const query = `From TikTok Shop US in the "${category}" category over the last 7 days, give me the 12 highest-performing video HOOKS — the opening line (spoken or on-screen text) that starts each top-revenue video. Return ONLY a JSON array of 12 short strings, each under 20 words. No prose, no markdown.`;
+async function callKalopilot(category: string, timeoutMs: number): Promise<{ ok: boolean; status: number; text: string; raw: string; json: Json }> {
+  const key = process.env.KALODATA_API_KEY;
+  if (!key) return { ok: false, status: 0, text: "", raw: "", json: null };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -65,18 +80,41 @@ export async function kalopilotTopHooks(category: string, timeoutMs = 280_000): 
     const res = await fetch(`${BASE}/api/pilot/skill/ext/v1/chat/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query: hooksQuery(kaloCategoryTerm(category)) }),
       signal: controller.signal,
     });
-    if (!res.ok) return [];
-    const json = (await res.json()) as Json;
-    const text: string = json?.data?.text ?? json?.text ?? "";
-    return parseHookList(text);
+    const raw = await res.text();
+    let json: Json = null;
+    try { json = JSON.parse(raw); } catch { /* keep raw */ }
+    const text: string = json?.data?.text ?? json?.data?.answer ?? json?.text ?? json?.message ?? "";
+    return { ok: res.ok, status: res.status, text, raw, json };
   } catch {
-    return [];
+    return { ok: false, status: 0, text: "", raw: "", json: null };
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function kalopilotTopHooks(category: string, timeoutMs = 280_000): Promise<string[]> {
+  const { text } = await callKalopilot(category, timeoutMs);
+  return parseHookList(text);
+}
+
+// Debug: surface the raw Kalopilot response so we can match the parser to it.
+export async function kalopilotRaw(category: string, timeoutMs = 280_000) {
+  if (!process.env.KALODATA_API_KEY) return { configured: false };
+  const { ok, status, text, raw, json } = await callKalopilot(category, timeoutMs);
+  return {
+    configured: true,
+    term: kaloCategoryTerm(category),
+    ok,
+    status,
+    topKeys: json && typeof json === "object" ? Object.keys(json) : null,
+    dataKeys: json?.data && typeof json.data === "object" ? Object.keys(json.data) : null,
+    pilotText: text || null,
+    parsedCount: parseHookList(text).length,
+    sample: raw.slice(0, 1500),
+  };
 }
 
 // Refresh one category's hooks via Kalopilot and cache them in Supabase.

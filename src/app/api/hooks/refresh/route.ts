@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { refreshHooks, CATEGORIES } from "@/lib/kalodata";
+import { refreshHooks, kalopilotRaw, CATEGORIES } from "@/lib/kalodata";
 
 export const dynamic = "force-dynamic";
 // Kalopilot is slow — give the function room. (Needs a Vercel plan that allows
@@ -22,6 +22,12 @@ export async function GET(req: NextRequest) {
       { error: "unauthorized — set CRON_SECRET in Vercel and pass it (Bearer header or ?key=)" },
       { status: 401 },
     );
+  }
+
+  // Debug: return Kalopilot's raw reply so we can match the parser to it.
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    const category = req.nextUrl.searchParams.get("category") ?? "Wellness";
+    return Response.json({ debug: true, ...(await kalopilotRaw(category)) });
   }
 
   const category = req.nextUrl.searchParams.get("category");
