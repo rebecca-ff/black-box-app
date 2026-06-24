@@ -13,8 +13,9 @@ export function supabaseBrowser(): SupabaseClient | null {
   return client;
 }
 
-// Auth is only on when explicitly enabled AND configured — so adding the anon
-// key alone never flips the live app into a login wall by surprise.
+// Auth turns on as soon as the browser Supabase client is configured (URL +
+// anon key present). Set NEXT_PUBLIC_AUTH_ENABLED="false" to force demo mode.
 export function authEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_AUTH_ENABLED === "true" && !!supabaseBrowser();
+  if (process.env.NEXT_PUBLIC_AUTH_ENABLED === "false") return false;
+  return !!supabaseBrowser();
 }
