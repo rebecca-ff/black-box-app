@@ -73,6 +73,16 @@ insert into storage.buckets (id, name, public)
 values ('clips', 'clips', true)
 on conflict (id) do nothing;
 
+-- ── hooks_cache (top hooks per category, refreshed daily from Kalopilot) ──────
+-- Briefs read this instantly; the slow Kalopilot call happens in a daily cron.
+create table if not exists public.hooks_cache (
+  category   text primary key,
+  hooks      jsonb not null default '[]'::jsonb,
+  source     text,
+  fetched_at timestamptz not null default now()
+);
+
 -- ── lock down: RLS on, no public policies (server-only via service role) ──────
 alter table public.campaigns      enable row level security;
 alter table public.participations enable row level security;
+alter table public.hooks_cache    enable row level security;
