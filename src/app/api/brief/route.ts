@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getTopHooks } from "@/lib/kalodata";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,11 @@ function stripFences(t: string) {
   return t.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-function buildPrompt(c: Campaign, creatorVoice: string) {
+function buildPrompt(c: Campaign, creatorVoice: string, hooks: string[]) {
+  const hooksBlock = hooks.length
+    ? `\nTOP-PERFORMING HOOKS IN THIS CATEGORY THIS WEEK (real TikTok Shop video openers, ranked by revenue). Study the PATTERN behind why these work and adapt the single strongest into a fresh hook for THIS brand. Never copy one verbatim, and never break compliance:\n${hooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}\n`
+    : "";
+
   return `You are a TikTok Shop creative director writing the affiliate creator brief for a brand campaign. Use the Timote framework: Hook -> Problem -> Solution -> Proof -> CTA.
 
 BRAND: ${c.name}
@@ -31,7 +36,7 @@ DEAL: ${c.commission}% commission${c.sample ? ", free sample provided" : ", no s
 CREATIVE VIBE: ${c.vibe}
 COMPLIANCE (follow exactly, no exceptions): ${c.compliance}
 ${creatorVoice ? `CREATOR VOICE: adapt wording to this creator's natural style while keeping every shot's structure and all compliance intact: ${creatorVoice}` : ""}
-
+${hooksBlock}
 The CTA must drive viewers to buy on the creator's TikTok Shop (product link / yellow basket), never off-platform.
 Voice: deadpan, specific, no aspirational filler, no influencer-speak.
 
@@ -61,11 +66,15 @@ export async function POST(req: NextRequest) {
   const creatorVoice =
     typeof body?.creatorVoice === "string" ? body.creatorVoice : "";
 
+  // Pull this week's top hooks for the category (no-op without KALODATA_API_KEY;
+  // never blocks or fails generation).
+  const hooks = await getTopHooks(c.category).catch(() => [] as string[]);
+
   try {
     const msg = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
-      messages: [{ role: "user", content: buildPrompt(c, creatorVoice) }],
+      messages: [{ role: "user", content: buildPrompt(c, creatorVoice, hooks) }],
     });
 
     const text = msg.content
