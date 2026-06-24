@@ -1,5 +1,5 @@
-import CallsheetApp from "@/components/callsheet-app";
+import AuthGate from "@/components/auth-gate";
 
 export default function Home() {
-  return <CallsheetApp />;
+  return <AuthGate />;
 }
