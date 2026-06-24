@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Copy, Check, Plus, Loader2, RefreshCw, Send, Link2, Gift, Sparkles, CheckCircle2, Clapperboard } from "lucide-react";
 import ShotFilmer from "./shot-filmer";
 import CreatorProfile from "./creator-profile";
+import Community from "./community";
 
 // ---------------------------------------------------------------------------
 // callsheet.  — dual-ended TikTok Shop affiliate briefing.
@@ -189,15 +190,18 @@ function SlideFlow({ c, brief }) {
 
 // ============================ BRAND SIDE =====================================
 
-function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut }) {
+function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity }) {
   const live = campaigns.filter((c) => c.status === "Live").length;
   return (
     <div className="px-5 pt-7 pb-12">
       <div className="flex items-center justify-between">
         <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
-        {onSignOut
-          ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
-          : <RoleToggle role={role} onChange={onRole} />}
+        <div className="flex items-center gap-2">
+          {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
+          {onSignOut
+            ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
+            : <RoleToggle role={role} onChange={onRole} />}
+        </div>
       </div>
       <p className="mt-2 text-[15px] leading-snug" style={{ color: "#9a9aa0" }}>Set the deal. AI writes the brief. Publish to your creators.</p>
       <div className="mt-6 flex items-center gap-4"><Eyebrow style={{ color: "#6b6b70" }}>{campaigns.length} campaigns</Eyebrow><Eyebrow style={{ color: live ? GREEN : "#6b6b70" }}>{live} live</Eyebrow></div>
@@ -334,7 +338,7 @@ function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
 
 // ============================ CREATOR SIDE ===================================
 
-function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile }) {
+function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile, onCommunity }) {
   const live = campaigns.filter((c) => c.status === "Live" && c.brief);
   const discover = live.filter((c) => !creator.joined.includes(c.id));
   const joined = live.filter((c) => creator.joined.includes(c.id));
@@ -344,6 +348,7 @@ function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJ
       <div className="flex items-center justify-between">
         <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex items-center gap-2">
+          {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
           {onProfile && <button onClick={onProfile} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Profile</button>}
           {onSignOut
             ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
@@ -475,6 +480,7 @@ function getCreatorKey() {
 export default function App({ authRole, userId, onSignOut } = {}) {
   const [campaigns, setCampaigns] = useState(SEED);
   const [role, setRole] = useState(authRole || "brand");
+  const [community, setCommunity] = useState(false);
   // brand nav
   const [bView, setBView] = useState("dash");
   const [bOpen, setBOpen] = useState(null);
@@ -558,19 +564,26 @@ export default function App({ authRole, userId, onSignOut } = {}) {
       <div className="mx-auto min-h-screen w-full max-w-md" style={{ backgroundColor: INK }}>
         {role === "brand" && (
           <>
-            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} />}
+            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} />}
             {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
           </>
         )}
         {role === "creator" && (
           <>
-            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} />}
+            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} />}
             {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onRemix={remix} onReset={resetRemix} onFilmed={markFilmed} remixState={remixState} />}
             {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} />}
           </>
         )}
       </div>
+      {community && authRole && (
+        <div className="fixed inset-0 z-40 overflow-y-auto" style={{ backgroundColor: INK }}>
+          <div className="mx-auto min-h-screen w-full max-w-md" style={{ backgroundColor: INK }}>
+            <Community userId={userId} authRole={authRole} onBack={() => setCommunity(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
