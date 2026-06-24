@@ -5,16 +5,28 @@
 
 const BASE = "https://api.cruva.com/v1";
 
+// Accept the plain name or the portal-style per-brand name, so it works
+// whichever way the env var was added.
+function shopId(): string {
+  return (
+    process.env.CRUVA_SHOP_ID ||
+    process.env.CRUVA_SHOP_ID_SOVEREIGN_SILVER ||
+    process.env.CRUVA_SHOP_ID_FIFTH_FIDO ||
+    process.env.CRUVA_SHOP_ID_ARBER ||
+    ""
+  );
+}
+
 function headers() {
   return {
     "x-api-key": process.env.CRUVA_API_KEY ?? "",
-    "x-shop-id": process.env.CRUVA_SHOP_ID ?? "",
+    "x-shop-id": shopId(),
     "Content-Type": "application/json",
   };
 }
 
 export function cruvaConfigured(): boolean {
-  return !!(process.env.CRUVA_API_KEY && process.env.CRUVA_SHOP_ID);
+  return !!(process.env.CRUVA_API_KEY && shopId());
 }
 
 export async function marketplaceSearch(query: string, pageSize = 30) {
