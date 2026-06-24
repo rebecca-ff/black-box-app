@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Copy, Check, Plus, Loader2, RefreshCw, Send, Link2, Gift, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Copy, Check, Plus, Loader2, RefreshCw, Send, Link2, Gift, Sparkles, CheckCircle2, Clapperboard } from "lucide-react";
+import ShotFilmer from "./shot-filmer";
 
 // ---------------------------------------------------------------------------
 // callsheet.  — dual-ended TikTok Shop affiliate briefing.
@@ -374,13 +375,15 @@ function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJ
   );
 }
 
-function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, remixState }) {
+function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, onFilmed, remixState }) {
   const [voice, setVoice] = useState("");
   const [open, setOpen] = useState(false);
+  const [filming, setFilming] = useState(false);
   const brief = creator.remixes[c.id] || c.brief;
   const remixed = !!creator.remixes[c.id];
   const posted = creator.posted.includes(c.id);
   const sampled = creator.samples.includes(c.id);
+  const filmed = creator.filmed.includes(c.id);
   return (
     <div className="pb-12">
       <div className="px-5 pt-6"><button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#9a9aa0" }}><ArrowLeft size={17} /> Feed</button></div>
@@ -391,6 +394,11 @@ function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, 
       <div className="mt-4"><SlideFlow c={c} brief={brief} /></div>
 
       <div className="mx-5 mt-6 space-y-2.5">
+        {/* film */}
+        <button onClick={() => setFilming(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold" style={{ backgroundColor: filmed ? "#101216" : c.color, color: filmed ? GREEN : c.ink, border: filmed ? `1px solid ${GREEN}` : "none" }}>
+          {filmed ? <><Check size={16} /> Filmed — re-shoot</> : <><Clapperboard size={16} /> Film it</>}
+        </button>
+
         {/* remix */}
         {!open ? (
           <button onClick={() => setOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: PAPER }}><Sparkles size={15} /> Remix to my voice</button>
@@ -416,6 +424,16 @@ function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, 
           ? <div className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold" style={{ backgroundColor: "#101216", border: `1px solid ${GREEN}`, color: GREEN }}><CheckCircle2 size={16} /> Marked as posted</div>
           : <button onClick={() => onPost(c.id)} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold" style={{ backgroundColor: c.color, color: c.ink }}><Send size={16} /> I posted this</button>}
       </div>
+
+      {filming && (
+        <ShotFilmer
+          shots={brief.shots}
+          color={c.color}
+          ink={c.ink}
+          onClose={() => setFilming(false)}
+          onComplete={() => onFilmed(c.id)}
+        />
+      )}
     </div>
   );
 }
@@ -433,7 +451,7 @@ export default function App() {
   const [cView, setCView] = useState("feed");
   const [cOpen, setCOpen] = useState(null);
   const [cTab, setCTab] = useState("discover");
-  const [creator, setCreator] = useState({ joined: [], posted: [], samples: [], remixes: {} });
+  const [creator, setCreator] = useState({ joined: [], posted: [], samples: [], filmed: [], remixes: {} });
   const [remixState, setRemixState] = useState("idle");
 
   const bCampaign = campaigns.find((c) => c.id === bOpen);
@@ -450,6 +468,7 @@ export default function App() {
   const openBrief = (id) => { setCOpen(id); setRemixState("idle"); setCView("brief"); };
   const requestSample = (id) => setCreator((s) => s.samples.includes(id) ? s : { ...s, samples: [...s.samples, id] });
   const markPosted = (id) => { setCreator((s) => s.posted.includes(id) ? s : { ...s, posted: [...s.posted, id] }); patch(id, (c) => ({ ...c, postedCount: c.postedCount + 1 })); };
+  const markFilmed = (id) => setCreator((s) => s.filmed.includes(id) ? s : { ...s, filmed: [...s.filmed, id] });
   const remix = async (id, voice) => { setRemixState("loading"); try { const b = await writeBrief(cCampaign, voice); setCreator((s) => ({ ...s, remixes: { ...s.remixes, [id]: b } })); setRemixState("idle"); } catch { setRemixState("failed"); } };
   const resetRemix = (id) => setCreator((s) => { const r = { ...s.remixes }; delete r[id]; return { ...s, remixes: r }; });
 
@@ -468,7 +487,7 @@ export default function App() {
         {role === "creator" && (
           <>
             {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} />}
-            {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onRemix={remix} onReset={resetRemix} remixState={remixState} />}
+            {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onRemix={remix} onReset={resetRemix} onFilmed={markFilmed} remixState={remixState} />}
           </>
         )}
       </div>
