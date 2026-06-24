@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { SEED_ROWS } from "@/lib/seed";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,16 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const db = supabaseAdmin();
   if (!db) return Response.json({ enabled: false, campaigns: [] });
+
+  // Idempotent seed of the starter brands. Fixed ids mean a re-run (or a race
+  // between two first-load requests) hits a PK conflict and is ignored — so the
+  // six brands can never duplicate.
+  const { count } = await db
+    .from("campaigns")
+    .select("id", { count: "exact", head: true });
+  if (!count) {
+    await db.from("campaigns").upsert(SEED_ROWS, { onConflict: "id", ignoreDuplicates: true });
+  }
 
   const { data, error } = await db
     .from("campaigns")

@@ -113,3 +113,52 @@ export async function getTopHooks(
     clearTimeout(timer);
   }
 }
+
+/**
+ * Diagnostic: calls video/rank and reports the raw upstream result without
+ * throwing, so we can tell a permissions/plan issue (success:false, code 501)
+ * apart from a response-shape mismatch. Returns no secrets.
+ */
+export async function probeVideoRank(category?: string, dateRange = "last7Day") {
+  const key = process.env.KALODATA_API_KEY;
+  if (!key) return { configured: false };
+
+  const category_id = category ? CATEGORY_IDS[category.toLowerCase()] : undefined;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12_000);
+
+  try {
+    const res = await fetch(`${BASE}/openapi/v1/video/rank`, {
+      method: "POST",
+      headers: { "secret-key": key, "content-type": "application/json;charset=utf-8" },
+      body: JSON.stringify({
+        region: "US",
+        language: "en-US",
+        currency: "USD",
+        date_range: dateRange,
+        category_id,
+        sort: { field: "revenue", type: "DESC" },
+        page_number: 1,
+      }),
+      signal: controller.signal,
+    });
+    const raw = await res.text();
+    let json: Json = null;
+    try { json = JSON.parse(raw); } catch { /* keep raw */ }
+    return {
+      configured: true,
+      category_id: category_id ?? null,
+      httpStatus: res.status,
+      ok: res.ok,
+      success: json ? json.success : undefined,
+      code: json ? (json.code ?? null) : null,
+      message: json ? (json.message ?? null) : null,
+      topKeys: json && typeof json === "object" ? Object.keys(json) : null,
+      sample: raw.slice(0, 800),
+    };
+  } catch (e) {
+    return { configured: true, error: String(e) };
+  } finally {
+    clearTimeout(timer);
+  }
+}

@@ -491,23 +491,9 @@ export default function App() {
         if (!alive || !data || !data.enabled) return; // not configured -> SEED
         setEnabled(true);
 
-        let rows = Array.isArray(data.campaigns) ? data.campaigns.map(mapRow) : [];
-        if (!rows.length) {
-          // First run on an empty DB: seed the starter brands so ids are real.
-          const seeded = [];
-          for (const s of SEED) {
-            try {
-              const r = await fetch("/api/campaigns", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(s),
-              });
-              const d = await r.json();
-              if (d && d.campaign) seeded.push(mapRow(d.campaign));
-            } catch { /* skip */ }
-          }
-          rows = seeded;
-        }
+        // The server seeds the starter brands idempotently, so just take what
+        // GET returns — no client-side seeding (that was racing into duplicates).
+        const rows = Array.isArray(data.campaigns) ? data.campaigns.map(mapRow) : [];
         if (alive && rows.length) setCampaigns(rows);
 
         const pRes = await fetch(`/api/participations?creator=${encodeURIComponent(creatorKey.current)}`);
