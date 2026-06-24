@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Copy, Check, Plus, Loader2, RefreshCw, Send, Link2, Gift, Sparkles, CheckCircle2, Clapperboard } from "lucide-react";
 import ShotFilmer from "./shot-filmer";
 
@@ -440,6 +440,30 @@ function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, 
 
 // ============================ ROOT ===========================================
 
+// Map a Supabase campaign row (snake_case) to the shape the UI uses.
+function mapRow(r) {
+  return {
+    id: r.id, name: r.name, product: r.product, category: r.category,
+    commission: r.commission, sample: r.sample, collab: r.collab, tier: r.tier,
+    color: r.color, ink: r.ink, vibe: r.vibe, compliance: r.compliance,
+    status: r.status, brief: r.brief,
+    joinedCount: r.joined_count ?? 0, postedCount: r.posted_count ?? 0,
+  };
+}
+
+// A stable anonymous id for this creator, kept in localStorage (until real auth).
+function getCreatorKey() {
+  if (typeof window === "undefined") return "";
+  let k = window.localStorage.getItem("cs_creator_key");
+  if (!k) {
+    k = (window.crypto && window.crypto.randomUUID)
+      ? window.crypto.randomUUID()
+      : "ck_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    window.localStorage.setItem("cs_creator_key", k);
+  }
+  return k;
+}
+
 export default function App() {
   const [campaigns, setCampaigns] = useState(SEED);
   const [role, setRole] = useState("brand");
@@ -453,24 +477,85 @@ export default function App() {
   const [cTab, setCTab] = useState("discover");
   const [creator, setCreator] = useState({ joined: [], posted: [], samples: [], filmed: [], remixes: {} });
   const [remixState, setRemixState] = useState("idle");
+  const [enabled, setEnabled] = useState(false);
+  const creatorKey = useRef("");
+
+  // Load persisted state from Supabase when configured; otherwise stay on SEED.
+  useEffect(() => {
+    creatorKey.current = getCreatorKey();
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/campaigns");
+        const data = await res.json();
+        if (!alive || !data || !data.enabled) return; // not configured -> SEED
+        setEnabled(true);
+
+        let rows = Array.isArray(data.campaigns) ? data.campaigns.map(mapRow) : [];
+        if (!rows.length) {
+          // First run on an empty DB: seed the starter brands so ids are real.
+          const seeded = [];
+          for (const s of SEED) {
+            try {
+              const r = await fetch("/api/campaigns", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(s),
+              });
+              const d = await r.json();
+              if (d && d.campaign) seeded.push(mapRow(d.campaign));
+            } catch { /* skip */ }
+          }
+          rows = seeded;
+        }
+        if (alive && rows.length) setCampaigns(rows);
+
+        const pRes = await fetch(`/api/participations?creator=${encodeURIComponent(creatorKey.current)}`);
+        const pData = await pRes.json();
+        if (!alive || !pData || !Array.isArray(pData.participations)) return;
+        const next = { joined: [], posted: [], samples: [], filmed: [], remixes: {} };
+        for (const p of pData.participations) {
+          if (p.joined) next.joined.push(p.campaign_id);
+          if (p.posted) next.posted.push(p.campaign_id);
+          if (p.sample_requested) next.samples.push(p.campaign_id);
+          if (p.filmed) next.filmed.push(p.campaign_id);
+          if (p.remix) next.remixes[p.campaign_id] = p.remix;
+        }
+        if (alive) setCreator(next);
+      } catch { /* any failure -> stay on in-memory SEED */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const bCampaign = campaigns.find((c) => c.id === bOpen);
   const cCampaign = campaigns.find((c) => c.id === cOpen);
   const patch = (id, fn) => setCampaigns((cs) => cs.map((c) => (c.id === id ? fn(c) : c)));
+  const saveCampaign = (id, fields) => { if (enabled) fetch("/api/campaigns", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...fields }) }).catch(() => {}); };
+  const saveParticipation = (id, fields) => { if (enabled) fetch("/api/participations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ campaign_id: id, creator_key: creatorKey.current, ...fields }) }).catch(() => {}); };
 
   // brand
   const bOpenC = (id) => { setBOpen(id); setGenState("idle"); setBView("detail"); };
-  const generate = async () => { setGenState("generating"); try { const brief = await writeBrief(bCampaign); patch(bOpen, (c) => ({ ...c, brief })); setGenState("idle"); } catch { setGenState("failed"); } };
-  const publish = () => patch(bOpen, (c) => ({ ...c, status: "Live" }));
+  const createCampaign = async (c) => {
+    if (enabled) {
+      try {
+        const res = await fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(c) });
+        const data = await res.json();
+        if (data && data.campaign) { const m = mapRow(data.campaign); setCampaigns((cs) => [m, ...cs]); bOpenC(m.id); return; }
+      } catch { /* fall back to local */ }
+    }
+    setCampaigns((cs) => [c, ...cs]); bOpenC(c.id);
+  };
+  const generate = async () => { setGenState("generating"); try { const brief = await writeBrief(bCampaign); patch(bOpen, (c) => ({ ...c, brief })); saveCampaign(bOpen, { brief }); setGenState("idle"); } catch { setGenState("failed"); } };
+  const publish = () => { patch(bOpen, (c) => ({ ...c, status: "Live" })); saveCampaign(bOpen, { status: "Live" }); };
 
   // creator
-  const join = (id) => { setCreator((s) => s.joined.includes(id) ? s : { ...s, joined: [...s.joined, id] }); patch(id, (c) => ({ ...c, joinedCount: c.joinedCount + 1 })); setCTab("joined"); };
+  const join = (id) => { setCreator((s) => s.joined.includes(id) ? s : { ...s, joined: [...s.joined, id] }); patch(id, (c) => ({ ...c, joinedCount: c.joinedCount + 1 })); saveParticipation(id, { joined: true }); setCTab("joined"); };
   const openBrief = (id) => { setCOpen(id); setRemixState("idle"); setCView("brief"); };
-  const requestSample = (id) => setCreator((s) => s.samples.includes(id) ? s : { ...s, samples: [...s.samples, id] });
-  const markPosted = (id) => { setCreator((s) => s.posted.includes(id) ? s : { ...s, posted: [...s.posted, id] }); patch(id, (c) => ({ ...c, postedCount: c.postedCount + 1 })); };
-  const markFilmed = (id) => setCreator((s) => s.filmed.includes(id) ? s : { ...s, filmed: [...s.filmed, id] });
-  const remix = async (id, voice) => { setRemixState("loading"); try { const b = await writeBrief(cCampaign, voice); setCreator((s) => ({ ...s, remixes: { ...s.remixes, [id]: b } })); setRemixState("idle"); } catch { setRemixState("failed"); } };
-  const resetRemix = (id) => setCreator((s) => { const r = { ...s.remixes }; delete r[id]; return { ...s, remixes: r }; });
+  const requestSample = (id) => { setCreator((s) => s.samples.includes(id) ? s : { ...s, samples: [...s.samples, id] }); saveParticipation(id, { sample_requested: true }); };
+  const markPosted = (id) => { setCreator((s) => s.posted.includes(id) ? s : { ...s, posted: [...s.posted, id] }); patch(id, (c) => ({ ...c, postedCount: c.postedCount + 1 })); saveParticipation(id, { posted: true }); };
+  const markFilmed = (id) => { setCreator((s) => s.filmed.includes(id) ? s : { ...s, filmed: [...s.filmed, id] }); saveParticipation(id, { filmed: true }); };
+  const remix = async (id, voice) => { setRemixState("loading"); try { const b = await writeBrief(cCampaign, voice); setCreator((s) => ({ ...s, remixes: { ...s.remixes, [id]: b } })); saveParticipation(id, { remix: b }); setRemixState("idle"); } catch { setRemixState("failed"); } };
+  const resetRemix = (id) => { setCreator((s) => { const r = { ...s.remixes }; delete r[id]; return { ...s, remixes: r }; }); saveParticipation(id, { remix: null }); };
 
   const switchRole = (r) => setRole(r);
 
@@ -480,7 +565,7 @@ export default function App() {
         {role === "brand" && (
           <>
             {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} />}
-            {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={(c) => { setCampaigns((cs) => [c, ...cs]); bOpenC(c.id); }} />}
+            {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
           </>
         )}
