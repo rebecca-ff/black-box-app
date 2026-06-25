@@ -6,6 +6,7 @@ import ShotFilmer from "./shot-filmer";
 import CreatorProfile from "./creator-profile";
 import Community from "./community";
 import BrandDiscover from "./brand-discover";
+import BrandEarnings from "./brand-earnings";
 import CreatorInvites from "./creator-invites";
 import HookLab from "./hook-lab";
 import { supabaseBrowser } from "@/lib/supabase-browser";
@@ -196,7 +197,7 @@ function SlideFlow({ c, brief }) {
 
 // ============================ BRAND SIDE =====================================
 
-function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab }) {
+function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab, onEarnings }) {
   const live = campaigns.filter((c) => c.status === "Live").length;
   return (
     <div className="px-5 pt-7 pb-12">
@@ -205,6 +206,7 @@ function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommun
         <div className="flex flex-wrap items-center justify-end gap-2">
           {onHookLab && <button onClick={onHookLab} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>✨ Hooks</button>}
           {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Find creators</button>}
+          {onEarnings && <button onClick={onEarnings} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Earnings</button>}
           {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
           {onSignOut
             ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
@@ -619,11 +621,12 @@ export default function App({ authRole, userId, onSignOut } = {}) {
       <div className="mx-auto min-h-screen w-full max-w-md" style={{ backgroundColor: INK }}>
         {role === "brand" && (
           <>
-            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} />}
+            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} onEarnings={authRole === "brand" ? () => setBView("earnings") : undefined} />}
             {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
             {bView === "hooklab" && <HookLab userId={userId} onBack={() => setBView("dash")} />}
+            {bView === "earnings" && <BrandEarnings onBack={() => setBView("dash")} />}
           </>
         )}
         {role === "creator" && (

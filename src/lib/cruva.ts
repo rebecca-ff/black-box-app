@@ -181,3 +181,29 @@ export function extractCreatorStats(json: Json): {
     followers: num(get(FOLLOWER_KEYS)),
   };
 }
+
+// Shop-level affiliate totals over a date window (GMV, commission, etc.).
+export async function shopStats(dateFrom: string, dateTo: string) {
+  const shopId = await resolveShopId();
+  const res = await fetch(`${BASE}/shop/stats`, {
+    method: "POST",
+    headers: { "x-api-key": key(), "x-shop-id": shopId, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date_range: { from: dateFrom, to: dateTo },
+      include_charts: false,
+      stats: ["affiliate_gmv", "commission", "affiliate_units_sold", "affiliate_videos_posted", "distinct_creators"],
+    }),
+  });
+  const raw = await res.text();
+  let json: Json = null;
+  try { json = JSON.parse(raw); } catch { /* keep raw */ }
+  return { ok: res.ok, status: res.status, raw, json };
+}
+
+// Pull a stat's total from a /shop/stats response by key.
+export function statValue(json: Json, statKey: string): number | null {
+  const stats = json?.data?.stats;
+  if (!Array.isArray(stats)) return null;
+  const s = stats.find((x: Json) => x && x.key === statKey);
+  return s ? num(s.total_count) : null;
+}
