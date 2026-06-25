@@ -76,7 +76,7 @@ export default function BrandDiscover({ userId, onBack }) {
     <div className="px-5 pt-6 pb-12">
       <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#9a9aa0" }}><ArrowLeft size={17} /> Dashboard</button>
       <div className="mt-4 text-2xl font-black tracking-tight" style={{ color: PAPER }}>Find creators</div>
-      <p className="mt-1 text-[14px]" style={{ color: "#8a8a90" }}>Search the TikTok Shop creator pool and save who you want to reach out to.</p>
+      <p className="mt-1 text-[14px]" style={{ color: "#8a8a90" }}>Your TikTok Shop creator network (via Cruva) — search and save who to work with.</p>
 
       <form onSubmit={(e) => { e.preventDefault(); search(q); }} className="mt-5 flex items-center gap-2 rounded-xl px-3.5 py-2.5" style={{ backgroundColor: "#16161a", border: "1px solid #2a2a30" }}>
         <Search size={16} style={{ color: "#7a7a80" }} />

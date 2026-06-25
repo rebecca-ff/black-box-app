@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { marketplaceSearch, extractCreators, cruvaConfigured, listShopsRaw } from "@/lib/cruva";
+import { marketplaceSearch, affiliateRoster, extractCreators, cruvaConfigured, listShopsRaw } from "@/lib/cruva";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +18,13 @@ export async function GET(req: NextRequest) {
   }
 
   const q = req.nextUrl.searchParams.get("q") ?? "";
+  // Default to the affiliate roster (works on the standard plan). Net-new
+  // marketplace search is enterprise-gated; reachable via ?source=marketplace.
+  const useMarketplace = req.nextUrl.searchParams.get("source") === "marketplace";
+  const call = useMarketplace ? marketplaceSearch : affiliateRoster;
 
   try {
-    const { ok, status, raw, json, shopId } = await marketplaceSearch(q);
+    const { ok, status, raw, json, shopId } = await call(q);
     if (debug) {
       const shops = await listShopsRaw();
       return Response.json({

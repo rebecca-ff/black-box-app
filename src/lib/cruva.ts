@@ -90,6 +90,21 @@ export async function marketplaceSearch(query: string, pageSize = 30) {
   return { ok: res.ok, status: res.status, raw, json, shopId };
 }
 
+// Affiliate roster (CRM) — creators already in the shop's orbit. Available on
+// the standard plan (unlike marketplace/search). This is the working source.
+export async function affiliateRoster(query: string, pageSize = 40) {
+  const shopId = await resolveShopId();
+  const res = await fetch(`${BASE}/affiliate/crm/list`, {
+    method: "POST",
+    headers: { "x-api-key": key(), "x-shop-id": shopId, "Content-Type": "application/json" },
+    body: JSON.stringify({ page_size: pageSize, page_number: 1, sort_by: "gmv", ...(query ? { handle: query } : {}) }),
+  });
+  const raw = await res.text();
+  let json: Json = null;
+  try { json = JSON.parse(raw); } catch { /* keep raw */ }
+  return { ok: res.ok, status: res.status, raw, json, shopId };
+}
+
 const HANDLE_KEYS = ["handle", "username", "creator_handle", "nickname", "unique_id", "creator_name", "name"];
 const FOLLOWER_KEYS = ["follower_count", "followers", "fans", "follower", "follower_cnt"];
 const GMV_KEYS = ["gmv", "total_gmv", "affiliate_gmv"];
