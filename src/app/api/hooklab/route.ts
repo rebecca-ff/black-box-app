@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const category = typeof body?.category === "string" ? body.category.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const compliance = typeof body?.compliance === "string" ? body.compliance.trim() : "";
+  const creatorVoice = typeof body?.creatorVoice === "string" ? body.creatorVoice.trim() : "";
 
   // Real top hooks for the category (Kalopilot daily cache; [] if none yet).
   const liveHooks = await getTopHooks(category).catch(() => [] as string[]);
@@ -35,6 +36,8 @@ ${compliance ? `COMPLIANCE (hard rules — never break, never imply a banned cla
 ${liveHooks.length
     ? `REAL TOP-PERFORMING HOOKS IN THIS CATEGORY THIS WEEK (ranked by revenue — study the underlying patterns, do not copy verbatim):\n${liveHooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
     : `There is no live hook data for this category — use proven, current best-in-class TikTok Shop hook patterns for it.`}
+
+${creatorVoice ? `CREATOR VOICE: write the newHooks in this creator's natural on-camera style while keeping every hook compliant: ${creatorVoice}` : ""}
 
 A "framework" is a repeatable content STRUCTURE that consistently performs (e.g. POV problem→fix, before/after, 3-reasons, myth-vs-fact, honest-review, day-in-the-life).
 

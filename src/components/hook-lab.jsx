@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Sparkles, Loader2, Copy, Check, TrendingUp, Zap, Layers } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Copy, Check, TrendingUp, Zap, Layers, Clapperboard } from "lucide-react";
 
 // Hook & Framework Lab — the core intelligence, product-driven. A brand enters
 // their product; the app surfaces the real top-performing hooks for the
@@ -28,12 +28,14 @@ function Copyable({ text }) {
   );
 }
 
-export default function HookLab({ defaultProduct = "", defaultCategory = "", defaultCompliance = "", onBack }) {
+export default function HookLab({ defaultProduct = "", defaultCategory = "", defaultCompliance = "", creatorMode = false, onFilm, onBack }) {
   const [product, setProduct] = useState(defaultProduct);
   const [category, setCategory] = useState(defaultCategory);
   const [description, setDescription] = useState("");
+  const [voice, setVoice] = useState("");
   const [state, setState] = useState("idle"); // idle | loading | done | error
   const [result, setResult] = useState(null);
+  const [edited, setEdited] = useState({});
 
   async function generate() {
     if (!product.trim()) return;
@@ -42,11 +44,12 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
       const res = await fetch("/api/hooklab", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, category, description, compliance: defaultCompliance }),
+        body: JSON.stringify({ product, category, description, compliance: defaultCompliance, creatorVoice: voice }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "failed");
       setResult(data);
+      setEdited(Object.fromEntries((data.newHooks || []).map((h, i) => [i, h])));
       setState("done");
     } catch {
       setState("error");
@@ -60,12 +63,13 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
         <Sparkles size={20} style={{ color: SYSTEM }} />
         <div className="text-2xl font-black tracking-tight" style={{ color: PAPER }}>Hook &amp; Framework Lab</div>
       </div>
-      <p className="mt-1 text-[14px]" style={{ color: "#8a8a90" }}>Drop in your product. Get the hooks and frameworks that are working — and fresh ones built for it.</p>
+      <p className="mt-1 text-[14px]" style={{ color: "#8a8a90" }}>{creatorMode ? "Pull what's working, tweak it to your voice, and film it — right here." : "Drop in your product. Get the hooks and frameworks that are working — and fresh ones built for it."}</p>
 
       <div className="mt-5 space-y-3">
         <input value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Product (e.g. Bio-Active Silver Hydrosol)" className="w-full rounded-xl px-3.5 py-3 text-[15px] outline-none" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }} />
         <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category (e.g. Wellness)" className="w-full rounded-xl px-3.5 py-3 text-[15px] outline-none" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }} />
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="One line on what it does (optional)" className="w-full resize-none rounded-xl px-3.5 py-3 text-[15px] outline-none" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }} />
+        {creatorMode && <input value={voice} onChange={(e) => setVoice(e.target.value)} placeholder="Your voice on camera — fast, funny, lots of slang (optional)" className="w-full rounded-xl px-3.5 py-3 text-[15px] outline-none" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }} />}
         <button disabled={!product.trim() || state === "loading"} onClick={generate} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold disabled:opacity-40" style={{ backgroundColor: SYSTEM, color: PAPER }}>
           {state === "loading" ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
           {state === "loading" ? "Working…" : "Find + generate hooks & frameworks"}
@@ -97,13 +101,25 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
           {result.newHooks?.length ? (
             <div>
               <div className="flex items-center gap-1.5"><Zap size={15} style={{ color: SYSTEM }} /><div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: SYSTEM }}>Fresh hooks for your product</div></div>
+              {creatorMode ? <div className="mt-1 text-[12px]" style={{ color: "#6b6b70" }}>Tap a hook to edit it, then Film.</div> : null}
               <div className="mt-3 space-y-2">
-                {result.newHooks.map((h, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ backgroundColor: "#15171b", border: "1px solid #23252b" }}>
-                    <div className="text-[15px] font-semibold" style={{ color: PAPER }}>{h}</div>
-                    <Copyable text={h} />
-                  </div>
-                ))}
+                {result.newHooks.map((h, i) => {
+                  const val = edited[i] ?? h;
+                  return creatorMode ? (
+                    <div key={i} className="rounded-xl p-3" style={{ backgroundColor: "#15171b", border: "1px solid #23252b" }}>
+                      <textarea value={val} onChange={(e) => setEdited((m) => ({ ...m, [i]: e.target.value }))} rows={2} className="w-full resize-none bg-transparent text-[15px] font-semibold outline-none" style={{ color: PAPER }} />
+                      <div className="mt-1 flex items-center justify-end gap-2">
+                        <Copyable text={val} />
+                        {onFilm && <button onClick={() => onFilm(val)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}><Clapperboard size={14} /> Film</button>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={i} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ backgroundColor: "#15171b", border: "1px solid #23252b" }}>
+                      <div className="text-[15px] font-semibold" style={{ color: PAPER }}>{h}</div>
+                      <Copyable text={h} />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}

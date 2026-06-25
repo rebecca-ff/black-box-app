@@ -347,7 +347,7 @@ function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
 
 // ============================ CREATOR SIDE ===================================
 
-function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile, onCommunity, onInvites }) {
+function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile, onCommunity, onInvites, onHooks }) {
   const live = campaigns.filter((c) => c.status === "Live" && c.brief);
   const discover = live.filter((c) => !creator.joined.includes(c.id));
   const joined = live.filter((c) => creator.joined.includes(c.id));
@@ -357,6 +357,7 @@ function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJ
       <div className="flex items-start justify-between">
         <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {onHooks && <button onClick={onHooks} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>✨ Hooks</button>}
           {onInvites && <button onClick={onInvites} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Invites</button>}
           {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
           {onProfile && <button onClick={onProfile} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Profile</button>}
@@ -492,6 +493,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
   const [campaigns, setCampaigns] = useState(SEED);
   const [role, setRole] = useState(authRole || "brand");
   const [community, setCommunity] = useState(false);
+  const [hookFilm, setHookFilm] = useState(null);
   // brand nav
   const [bView, setBView] = useState("dash");
   const [bOpen, setBOpen] = useState(null);
@@ -568,6 +570,8 @@ export default function App({ authRole, userId, onSignOut } = {}) {
   const remix = async (id, voice) => { setRemixState("loading"); try { const b = await writeBrief(cCampaign, voice); setCreator((s) => ({ ...s, remixes: { ...s.remixes, [id]: b } })); saveParticipation(id, { remix: b }); setRemixState("idle"); } catch { setRemixState("failed"); } };
   const resetRemix = (id) => { setCreator((s) => { const r = { ...s.remixes }; delete r[id]; return { ...s, remixes: r }; }); saveParticipation(id, { remix: null }); };
 
+  const filmHook = (hook) => setHookFilm([{ title: "Your hook", action: "Deliver this hook to camera, then keep rolling with your take.", onscreen: hook, note: "" }]);
+
   const switchRole = (r) => setRole(r);
 
   return (
@@ -584,10 +588,11 @@ export default function App({ authRole, userId, onSignOut } = {}) {
         )}
         {role === "creator" && (
           <>
-            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} />}
+            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} onHooks={() => setCView("hooklab")} />}
             {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onRemix={remix} onReset={resetRemix} onFilmed={markFilmed} remixState={remixState} />}
             {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} />}
             {cView === "invites" && <CreatorInvites userId={userId} onBack={() => setCView("feed")} />}
+            {cView === "hooklab" && <HookLab creatorMode onFilm={filmHook} onBack={() => setCView("feed")} />}
           </>
         )}
       </div>
@@ -598,6 +603,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
           </div>
         </div>
       )}
+      {hookFilm && <ShotFilmer shots={hookFilm} color={SYSTEM} ink="#33080b" onClose={() => setHookFilm(null)} onComplete={() => setHookFilm(null)} />}
     </div>
   );
 }
