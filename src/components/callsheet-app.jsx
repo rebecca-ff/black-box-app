@@ -7,6 +7,7 @@ import CreatorProfile from "./creator-profile";
 import Community from "./community";
 import BrandDiscover from "./brand-discover";
 import CreatorInvites from "./creator-invites";
+import HookLab from "./hook-lab";
 
 // ---------------------------------------------------------------------------
 // callsheet.  — dual-ended TikTok Shop affiliate briefing.
@@ -194,14 +195,15 @@ function SlideFlow({ c, brief }) {
 
 // ============================ BRAND SIDE =====================================
 
-function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover }) {
+function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab }) {
   const live = campaigns.filter((c) => c.status === "Live").length;
   return (
     <div className="px-5 pt-7 pb-12">
       <div className="flex items-start justify-between">
         <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>Find creators</button>}
+          {onHookLab && <button onClick={onHookLab} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>✨ Hooks</button>}
+          {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Find creators</button>}
           {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
           {onSignOut
             ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
@@ -573,10 +575,11 @@ export default function App({ authRole, userId, onSignOut } = {}) {
       <div className="mx-auto min-h-screen w-full max-w-md" style={{ backgroundColor: INK }}>
         {role === "brand" && (
           <>
-            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} />}
+            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} />}
             {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
+            {bView === "hooklab" && <HookLab onBack={() => setBView("dash")} />}
           </>
         )}
         {role === "creator" && (
