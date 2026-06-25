@@ -10,34 +10,37 @@ function stripFences(t: string) {
   return t.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-// POST /api/hooklab — the core intelligence: given a product, surface the real
-// top-performing hooks for its category and generate fresh, product-specific
-// hooks + content frameworks the brand can hand to creators.
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const product = typeof body?.product === "string" ? body.product.trim() : "";
-  if (!product) return Response.json({ error: "product is required" }, { status: 400 });
+// Tolerant of preamble / trailing prose — extract the JSON object if a raw
+// JSON.parse fails.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parseJson(text: string): any {
+  const c = stripFences(text);
+  try { return JSON.parse(c); } catch { /* try to extract */ }
+  const s = c.indexOf("{");
+  const e = c.lastIndexOf("}");
+  if (s >= 0 && e > s) return JSON.parse(c.slice(s, e + 1));
+  throw new Error("no parseable JSON");
+}
 
-  const category = typeof body?.category === "string" ? body.category.trim() : "";
-  const description = typeof body?.description === "string" ? body.description.trim() : "";
-  const compliance = typeof body?.compliance === "string" ? body.compliance.trim() : "";
-  const creatorVoice = typeof body?.creatorVoice === "string" ? body.creatorVoice.trim() : "";
-
-  // Real top hooks for the category (Kalopilot daily cache; [] if none yet).
-  const liveHooks = await getTopHooks(category).catch(() => [] as string[]);
-
-  const prompt = `You are a TikTok Shop creative strategist. A brand wants the winning hooks and content frameworks for their product, plus fresh ideas to use right now.
+function buildPrompt(
+  product: string,
+  category: string,
+  description: string,
+  compliance: string,
+  creatorVoice: string,
+  liveHooks: string[],
+) {
+  return `You are a TikTok Shop creative strategist. A brand wants the winning hooks and content frameworks for their product, plus fresh ideas to use right now.
 
 PRODUCT: ${product}
 CATEGORY: ${category || "general"}
 ${description ? `WHAT IT IS: ${description}` : ""}
 ${compliance ? `COMPLIANCE (hard rules — never break, never imply a banned claim): ${compliance}` : ""}
+${creatorVoice ? `CREATOR VOICE: write the newHooks in this creator's natural on-camera style while keeping every hook compliant: ${creatorVoice}` : ""}
 
 ${liveHooks.length
-    ? `REAL TOP-PERFORMING HOOKS IN THIS CATEGORY THIS WEEK (ranked by revenue — study the underlying patterns, do not copy verbatim):\n${liveHooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
-    : `There is no live hook data for this category — use proven, current best-in-class TikTok Shop hook patterns for it.`}
-
-${creatorVoice ? `CREATOR VOICE: write the newHooks in this creator's natural on-camera style while keeping every hook compliant: ${creatorVoice}` : ""}
+      ? `REAL TOP-PERFORMING HOOKS IN THIS CATEGORY THIS WEEK (ranked by revenue — study the underlying patterns, do not copy verbatim):\n${liveHooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
+      : `There is no live hook data for this category — use proven, current best-in-class TikTok Shop hook patterns for it.`}
 
 A "framework" is a repeatable content STRUCTURE that consistently performs (e.g. POV problem→fix, before/after, 3-reasons, myth-vs-fact, honest-review, day-in-the-life).
 
@@ -49,18 +52,68 @@ Return ONLY valid JSON — no preamble, no markdown, no fences:
 }
 
 Give 5-6 topHooks, 8 newHooks, and 4 frameworks. Voice: deadpan, specific, no influencer fluff. Respect compliance absolutely.`;
+}
+
+async function run(opts: { product: string; category: string; description: string; compliance: string; creatorVoice: string }) {
+  const liveHooks = await getTopHooks(opts.category).catch(() => [] as string[]);
+  const msg = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4000,
+    messages: [{ role: "user", content: buildPrompt(opts.product, opts.category, opts.description, opts.compliance, opts.creatorVoice, liveHooks) }],
+  });
+  const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("\n");
+  return { text, stopReason: msg.stop_reason, liveHooks };
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => null);
+  const product = typeof body?.product === "string" ? body.product.trim() : "";
+  if (!product) return Response.json({ error: "product is required" }, { status: 400 });
+
+  const opts = {
+    product,
+    category: typeof body?.category === "string" ? body.category.trim() : "",
+    description: typeof body?.description === "string" ? body.description.trim() : "",
+    compliance: typeof body?.compliance === "string" ? body.compliance.trim() : "",
+    creatorVoice: typeof body?.creatorVoice === "string" ? body.creatorVoice.trim() : "",
+  };
 
   try {
-    const msg = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("\n");
-    const data = JSON.parse(stripFences(text));
+    const { text, liveHooks } = await run(opts);
+    const data = parseJson(text);
     return Response.json({ ...data, usedLiveHooks: liveHooks.length });
   } catch (err) {
     console.error("hooklab error:", err);
-    return Response.json({ error: "Generation failed" }, { status: 502 });
+    return Response.json({ error: "Generation failed", detail: String(err) }, { status: 502 });
+  }
+}
+
+// GET ?debug=1 — sample run that surfaces stop_reason + parse result.
+export async function GET(req: NextRequest) {
+  if (req.nextUrl.searchParams.get("debug") !== "1") {
+    return Response.json({ error: "POST only" }, { status: 405 });
+  }
+  try {
+    const { text, stopReason, liveHooks } = await run({
+      product: "Bio-Active Silver Hydrosol",
+      category: "Health",
+      description: "daily wellness drops",
+      compliance: "",
+      creatorVoice: "",
+    });
+    let parsed: any = null;
+    let parseError: string | null = null;
+    try { parsed = parseJson(text); } catch (e) { parseError = String(e); }
+    return Response.json({
+      stopReason,
+      liveHooks: liveHooks.length,
+      rawLength: text.length,
+      parseOk: !!parsed,
+      parseError,
+      counts: parsed ? { topHooks: parsed.topHooks?.length, newHooks: parsed.newHooks?.length, frameworks: parsed.frameworks?.length } : null,
+      rawTail: text.slice(-200),
+    });
+  } catch (err) {
+    return Response.json({ error: String(err) }, { status: 200 });
   }
 }
