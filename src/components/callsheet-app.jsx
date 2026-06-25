@@ -570,7 +570,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
   const remix = async (id, voice) => { setRemixState("loading"); try { const b = await writeBrief(cCampaign, voice); setCreator((s) => ({ ...s, remixes: { ...s.remixes, [id]: b } })); saveParticipation(id, { remix: b }); setRemixState("idle"); } catch { setRemixState("failed"); } };
   const resetRemix = (id) => { setCreator((s) => { const r = { ...s.remixes }; delete r[id]; return { ...s, remixes: r }; }); saveParticipation(id, { remix: null }); };
 
-  const filmHook = (hook) => setHookFilm([{ title: "Your hook", action: "Deliver this hook to camera, then keep rolling with your take.", onscreen: hook, note: "" }]);
+  const filmHook = (shots) => setHookFilm(Array.isArray(shots) && shots.length ? shots : null);
 
   const switchRole = (r) => setRole(r);
 

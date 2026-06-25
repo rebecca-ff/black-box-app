@@ -36,6 +36,25 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
   const [state, setState] = useState("idle"); // idle | loading | done | error
   const [result, setResult] = useState(null);
   const [edited, setEdited] = useState({});
+  const [filmBusy, setFilmBusy] = useState(null);
+
+  async function filmFromHook(hook, i) {
+    if (!onFilm) return;
+    setFilmBusy(i);
+    try {
+      const res = await fetch("/api/hookscript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hook, product, category, description, compliance: defaultCompliance, creatorVoice: voice }),
+      });
+      const data = await res.json();
+      if (data.shots && data.shots.length) onFilm(data.shots);
+      else onFilm([{ title: "Your hook", action: "Deliver this hook, then keep rolling with your take.", onscreen: hook, note: "" }]);
+    } catch {
+      onFilm([{ title: "Your hook", action: "Deliver this hook, then keep rolling with your take.", onscreen: hook, note: "" }]);
+    }
+    setFilmBusy(null);
+  }
 
   async function generate() {
     if (!product.trim()) return;
@@ -110,7 +129,7 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
                       <textarea value={val} onChange={(e) => setEdited((m) => ({ ...m, [i]: e.target.value }))} rows={2} className="w-full resize-none bg-transparent text-[15px] font-semibold outline-none" style={{ color: PAPER }} />
                       <div className="mt-1 flex items-center justify-end gap-2">
                         <Copyable text={val} />
-                        {onFilm && <button onClick={() => onFilm(val)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}><Clapperboard size={14} /> Film</button>}
+                        {onFilm && <button disabled={filmBusy === i} onClick={() => filmFromHook(val, i)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold disabled:opacity-60" style={{ backgroundColor: SYSTEM, color: PAPER }}>{filmBusy === i ? <Loader2 size={14} className="animate-spin" /> : <Clapperboard size={14} />} {filmBusy === i ? "Building script…" : "Film"}</button>}
                       </div>
                     </div>
                   ) : (
