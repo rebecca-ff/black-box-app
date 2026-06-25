@@ -8,6 +8,7 @@ import Community from "./community";
 import BrandDiscover from "./brand-discover";
 import CreatorInvites from "./creator-invites";
 import HookLab from "./hook-lab";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 // ---------------------------------------------------------------------------
 // callsheet.  — dual-ended TikTok Shop affiliate briefing.
@@ -399,21 +400,46 @@ function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJ
   );
 }
 
-function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, onFilmed, remixState }) {
-  const [voice, setVoice] = useState("");
-  const [open, setOpen] = useState(false);
+function CreatorBrief({ c, creator, userId, onBack, onSample, onPost, onFilmed, onOpenHookLab }) {
   const [filming, setFilming] = useState(false);
-  const brief = creator.remixes[c.id] || c.brief;
-  const remixed = !!creator.remixes[c.id];
+  const [override, setOverride] = useState(null);
+  const [savedHooks, setSavedHooks] = useState([]);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const brief = override || c.brief;
   const posted = creator.posted.includes(c.id);
   const sampled = creator.samples.includes(c.id);
   const filmed = creator.filmed.includes(c.id);
+
+  useEffect(() => {
+    const sb = supabaseBrowser();
+    if (!sb || !userId) return;
+    let alive = true;
+    sb.from("saved_hooks").select("id,hook").eq("user_id", userId).order("created_at", { ascending: false })
+      .then(({ data }) => { if (alive) setSavedHooks(data || []); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function swapToHook(hook) {
+    setSwapping(true);
+    try {
+      const res = await fetch("/api/hookscript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hook, product: c.product, category: c.category, compliance: c.compliance }),
+      });
+      const data = await res.json();
+      if (data.shots && data.shots.length) { setOverride(data); setSwapOpen(false); }
+    } catch { /* ignore */ }
+    setSwapping(false);
+  }
   return (
     <div className="pb-12">
       <div className="px-5 pt-6"><button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#9a9aa0" }}><ArrowLeft size={17} /> Feed</button></div>
       <div className="px-5 pt-3"><div className="text-2xl font-black tracking-tight" style={{ color: PAPER }}>{c.name}</div><div className="text-[14px] font-semibold" style={{ color: "#8a8a90" }}>{c.product}</div></div>
 
-      {remixed && <div className="mx-5 mt-3 flex items-center justify-between rounded-xl px-3.5 py-2.5" style={{ backgroundColor: "#101216", border: `1px solid ${c.color}` }}><span className="text-[12px] font-bold" style={{ color: c.color }}>Remixed to your voice</span><button onClick={() => onReset(c.id)} className="text-[12px] font-bold" style={{ color: "#8a8a90" }}>Reset</button></div>}
+      {override && <div className="mx-5 mt-3 flex items-center justify-between rounded-xl px-3.5 py-2.5" style={{ backgroundColor: "#101216", border: `1px solid ${c.color}` }}><span className="text-[12px] font-bold" style={{ color: c.color }}>Using your hook</span><button onClick={() => setOverride(null)} className="text-[12px] font-bold" style={{ color: "#8a8a90" }}>Back to brand hook</button></div>}
 
       <div className="mt-4"><SlideFlow c={c} brief={brief} /></div>
 
@@ -423,18 +449,32 @@ function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, 
           {filmed ? <><Check size={16} /> Filmed — re-shoot</> : <><Clapperboard size={16} /> Film it</>}
         </button>
 
-        {/* remix */}
-        {!open ? (
-          <button onClick={() => setOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: PAPER }}><Sparkles size={15} /> Remix to my voice</button>
+        {/* hook swap — use the brand's hook, a saved hook, or open Hook Lab */}
+        {!swapOpen ? (
+          <button onClick={() => setSwapOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: PAPER }}><Sparkles size={15} /> Use a different hook</button>
         ) : (
           <div className="rounded-2xl p-4" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
-            <Eyebrow style={{ color: "#7a7a80" }}>How do you talk on camera?</Eyebrow>
-            <input value={voice} onChange={(e) => setVoice(e.target.value)} placeholder="fast, funny, lots of slang" className="mt-2 w-full rounded-xl px-3.5 py-3 text-[15px] outline-none" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }} />
-            <div className="mt-3 flex gap-2">
-              <button onClick={() => setOpen(false)} className="rounded-full px-4 py-2.5 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: "#9a9aa0" }}>Cancel</button>
-              <button disabled={!voice.trim() || remixState === "loading"} onClick={() => onRemix(c.id, voice)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold disabled:opacity-40" style={{ backgroundColor: c.color, color: c.ink }}>{remixState === "loading" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Rewrite for me</button>
-            </div>
-            {remixState === "failed" && <div className="mt-2 text-[12px] font-semibold" style={{ color: SYSTEM }}>Didn&apos;t land. Try again.</div>}
+            <Eyebrow style={{ color: "#7a7a80" }}>Swap the hook</Eyebrow>
+            <div className="mt-1 text-[12px] leading-snug" style={{ color: "#8a8a90" }}>This is the hook {c.name} is pushing. Pick one of your saved hooks (the script rebuilds around it), or open the Hook Lab.</div>
+            {swapping ? (
+              <div className="py-6 text-center"><Loader2 size={20} className="mx-auto animate-spin" style={{ color: c.color }} /><div className="mt-2 text-[13px]" style={{ color: "#8a8a90" }}>Rebuilding the script around your hook…</div></div>
+            ) : (
+              <>
+                {savedHooks.length ? (
+                  <div className="mt-3 space-y-1.5">
+                    {savedHooks.map((s) => (
+                      <button key={s.id} onClick={() => swapToHook(s.hook)} className="block w-full rounded-xl px-3 py-2.5 text-left text-[14px] font-semibold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>{s.hook}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 text-[13px]" style={{ color: "#6b6b70" }}>No saved hooks yet — save some in the Hook Lab.</div>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => setSwapOpen(false)} className="rounded-full px-4 py-2.5 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: "#9a9aa0" }}>Cancel</button>
+                  {onOpenHookLab && <button onClick={onOpenHookLab} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold" style={{ backgroundColor: c.color, color: c.ink }}><Sparkles size={15} /> Open Hook Lab</button>}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -583,16 +623,16 @@ export default function App({ authRole, userId, onSignOut } = {}) {
             {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
-            {bView === "hooklab" && <HookLab onBack={() => setBView("dash")} />}
+            {bView === "hooklab" && <HookLab userId={userId} onBack={() => setBView("dash")} />}
           </>
         )}
         {role === "creator" && (
           <>
             {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} onHooks={() => setCView("hooklab")} />}
-            {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onRemix={remix} onReset={resetRemix} onFilmed={markFilmed} remixState={remixState} />}
+            {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} userId={userId} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onFilmed={markFilmed} onOpenHookLab={() => setCView("hooklab")} />}
             {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} />}
             {cView === "invites" && <CreatorInvites userId={userId} onBack={() => setCView("feed")} />}
-            {cView === "hooklab" && <HookLab creatorMode onFilm={filmHook} onBack={() => setCView("feed")} />}
+            {cView === "hooklab" && <HookLab creatorMode userId={userId} onFilm={filmHook} onBack={() => setCView("feed")} />}
           </>
         )}
       </div>

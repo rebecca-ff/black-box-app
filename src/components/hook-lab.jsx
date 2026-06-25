@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Sparkles, Loader2, Copy, Check, TrendingUp, Zap, Layers, Clapperboard } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Copy, Check, TrendingUp, Zap, Layers, Clapperboard, Bookmark } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 // Hook & Framework Lab — the core intelligence, product-driven. A brand enters
 // their product; the app surfaces the real top-performing hooks for the
@@ -28,7 +29,15 @@ function Copyable({ text }) {
   );
 }
 
-export default function HookLab({ defaultProduct = "", defaultCategory = "", defaultCompliance = "", creatorMode = false, onFilm, onBack }) {
+function SaveBtn({ saved, onSave }) {
+  return (
+    <button onClick={onSave} className="shrink-0 grid h-8 w-8 place-items-center rounded-full" style={{ backgroundColor: "#0d0e11", border: "1px solid #2a2a30", color: saved ? "#3ECF8E" : "#9a9aa0" }}>
+      {saved ? <Check size={14} /> : <Bookmark size={14} />}
+    </button>
+  );
+}
+
+export default function HookLab({ defaultProduct = "", defaultCategory = "", defaultCompliance = "", creatorMode = false, userId, onFilm, onBack }) {
   const [product, setProduct] = useState(defaultProduct);
   const [category, setCategory] = useState(defaultCategory);
   const [description, setDescription] = useState("");
@@ -37,6 +46,14 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
   const [result, setResult] = useState(null);
   const [edited, setEdited] = useState({});
   const [filmBusy, setFilmBusy] = useState(null);
+  const [savedSet, setSavedSet] = useState({});
+
+  async function saveHook(hook) {
+    const sb = supabaseBrowser();
+    if (!sb || !userId || !hook || savedSet[hook]) return;
+    setSavedSet((m) => ({ ...m, [hook]: true }));
+    try { await sb.from("saved_hooks").insert({ user_id: userId, hook, product, category }); } catch { /* ignore */ }
+  }
 
   async function filmFromHook(hook, i) {
     if (!onFilm) return;
@@ -128,6 +145,7 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
                     <div key={i} className="rounded-xl p-3" style={{ backgroundColor: "#15171b", border: "1px solid #23252b" }}>
                       <textarea value={val} onChange={(e) => setEdited((m) => ({ ...m, [i]: e.target.value }))} rows={2} className="w-full resize-none bg-transparent text-[15px] font-semibold outline-none" style={{ color: PAPER }} />
                       <div className="mt-1 flex items-center justify-end gap-2">
+                        {userId && <SaveBtn saved={!!savedSet[val]} onSave={() => saveHook(val)} />}
                         <Copyable text={val} />
                         {onFilm && <button disabled={filmBusy === i} onClick={() => filmFromHook(val, i)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold disabled:opacity-60" style={{ backgroundColor: SYSTEM, color: PAPER }}>{filmBusy === i ? <Loader2 size={14} className="animate-spin" /> : <Clapperboard size={14} />} {filmBusy === i ? "Building script…" : "Film"}</button>}
                       </div>
@@ -135,7 +153,7 @@ export default function HookLab({ defaultProduct = "", defaultCategory = "", def
                   ) : (
                     <div key={i} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ backgroundColor: "#15171b", border: "1px solid #23252b" }}>
                       <div className="text-[15px] font-semibold" style={{ color: PAPER }}>{h}</div>
-                      <Copyable text={h} />
+                      <div className="flex shrink-0 items-center gap-2">{userId && <SaveBtn saved={!!savedSet[h]} onSave={() => saveHook(h)} />}<Copyable text={h} /></div>
                     </div>
                   );
                 })}
