@@ -139,8 +139,10 @@ function SlideFlow({ c, brief }) {
       <div className="mx-5 flex flex-wrap items-center gap-1.5 rounded-xl px-3.5 py-3" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
         <Eyebrow style={{ color: "#7a7a80" }}>Your deal</Eyebrow><span className="mx-1 text-[#3a3a42]">·</span>
         <Chip bg={c.color} fg={c.ink}>{c.commission}% commission</Chip>
+        {c.flatFee ? <Chip bg="#1a1a1f" fg="#9a9aa0">${c.flatFee} flat</Chip> : null}
         {c.sample && <Chip bg="#1a1a1f" fg="#9a9aa0">Free sample</Chip>}
         <Chip bg="#1a1a1f" fg="#9a9aa0">{c.collab} collab</Chip>
+        {c.bonus ? <div className="mt-1 w-full text-[12px] font-semibold" style={{ color: GREEN }}>★ Bonus: {c.bonus}</div> : null}
       </div>
 
       <div className="px-5 pt-5">
@@ -246,7 +248,7 @@ function Segmented({ options, value, onChange, color }) {
 }
 
 function NewCampaign({ onCancel, onCreate }) {
-  const [f, setF] = useState({ name: "", product: "", category: "", commission: 20, sample: true, collab: "Open", tier: "Micro", vibe: "", compliance: "" });
+  const [f, setF] = useState({ name: "", product: "", category: "", commission: 20, flatFee: "", bonus: "", sample: true, collab: "Open", tier: "Micro", vibe: "", compliance: "" });
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const ready = f.name.trim() && f.product.trim();
   const input = (label, k, ph, area) => (
@@ -265,6 +267,8 @@ function NewCampaign({ onCancel, onCreate }) {
         {input("Product", "product", "Bio-Active Silver Hydrosol")}
         {input("Category", "category", "Wellness")}
         <div><Eyebrow style={{ color: "#7a7a80" }}>Commission — {f.commission}%</Eyebrow><input type="range" min="5" max="40" value={f.commission} onChange={(e) => set("commission", +e.target.value)} className="mt-2 w-full" style={{ accentColor: SYSTEM }} /></div>
+        {input("Flat fee ($, optional)", "flatFee", "e.g. 150")}
+        {input("Bonus (optional)", "bonus", "e.g. $100 bonus at 100k views")}
         <div className="flex items-center justify-between rounded-xl px-3.5 py-3" style={{ backgroundColor: "#16161a", border: "1px solid #2a2a30" }}>
           <div className="flex items-center gap-2"><Gift size={16} style={{ color: "#9a9aa0" }} /><span className="text-[15px] font-semibold" style={{ color: PAPER }}>Free sample</span></div>
           <button onClick={() => set("sample", !f.sample)} className="h-7 w-12 rounded-full p-0.5 transition-colors" style={{ backgroundColor: f.sample ? SYSTEM : "#33333a" }}><div className="h-6 w-6 rounded-full bg-white transition-transform" style={{ transform: f.sample ? "translateX(20px)" : "translateX(0)" }} /></button>
@@ -274,7 +278,7 @@ function NewCampaign({ onCancel, onCreate }) {
         {input("Creative vibe", "vibe", "Calm, editorial, science-forward")}
         {input("Compliance / off-limits", "compliance", "No cure claims. Wellness framing only.", true)}
       </div>
-      <button disabled={!ready} onClick={() => onCreate({ id: "c" + Date.now(), name: f.name.trim(), product: f.product.trim(), category: f.category.trim() || "Custom", commission: f.commission, sample: f.sample, collab: f.collab, tier: f.tier, color: SYSTEM, ink: "#33080b", vibe: f.vibe.trim() || "Authentic, specific", compliance: f.compliance.trim() || "Keep claims honest and verifiable.", status: "Draft", brief: null, joinedCount: 0, postedCount: 0 })}
+      <button disabled={!ready} onClick={() => onCreate({ id: "c" + Date.now(), name: f.name.trim(), product: f.product.trim(), category: f.category.trim() || "Custom", commission: f.commission, flatFee: f.flatFee ? +f.flatFee : null, bonus: f.bonus.trim() || null, sample: f.sample, collab: f.collab, tier: f.tier, color: SYSTEM, ink: "#33080b", vibe: f.vibe.trim() || "Authentic, specific", compliance: f.compliance.trim() || "Keep claims honest and verifiable.", status: "Draft", brief: null, joinedCount: 0, postedCount: 0 })}
         className="mt-7 w-full rounded-full py-4 text-sm font-bold transition-transform active:scale-95 disabled:opacity-40" style={{ backgroundColor: SYSTEM, color: PAPER }}>Create campaign</button>
     </div>
   );
@@ -461,7 +465,8 @@ function CreatorBrief({ c, creator, onBack, onSample, onPost, onRemix, onReset, 
 function mapRow(r) {
   return {
     id: r.id, name: r.name, product: r.product, category: r.category,
-    commission: r.commission, sample: r.sample, collab: r.collab, tier: r.tier,
+    commission: r.commission, flatFee: r.flat_fee ?? null, bonus: r.bonus ?? null,
+    sample: r.sample, collab: r.collab, tier: r.tier,
     color: r.color, ink: r.ink, vibe: r.vibe, compliance: r.compliance,
     status: r.status, brief: r.brief,
     joinedCount: r.joined_count ?? 0, postedCount: r.posted_count ?? 0,

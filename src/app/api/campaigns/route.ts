@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
     product: String(c.product),
     category: c.category ?? null,
     commission: typeof c.commission === "number" ? c.commission : 20,
+    flat_fee: c.flatFee ?? null,
+    bonus: c.bonus ?? null,
     sample: c.sample ?? true,
     collab: c.collab ?? "Open",
     tier: c.tier ?? "Micro",
@@ -71,7 +73,7 @@ export async function PATCH(req: NextRequest) {
   if (!body?.id) return Response.json({ error: "id is required" }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
-  for (const k of ["status", "brief", "joined_count", "posted_count"]) {
+  for (const k of ["status", "brief", "joined_count", "posted_count", "flat_fee", "bonus"]) {
     if (k in body) patch[k] = body[k];
   }
   if (Object.keys(patch).length === 0) {
