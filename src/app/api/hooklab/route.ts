@@ -93,6 +93,9 @@ export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.get("debug") !== "1") {
     return Response.json({ error: "POST only" }, { status: 405 });
   }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ hasAnthropicKey: false, note: "ANTHROPIC_API_KEY is NOT set in this deployment — add it in Vercel and redeploy" });
+  }
   try {
     const { text, stopReason, liveHooks } = await run({
       product: "Bio-Active Silver Hydrosol",
