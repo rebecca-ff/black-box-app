@@ -183,7 +183,7 @@ function SlideFlow({ c, brief }) {
         <div className="rounded-2xl p-5" style={{ backgroundColor: PAPER }}>
           <div className="flex items-center justify-between">
             <div><div className="text-[15px] font-black" style={{ color: INK }}>Post description</div><div className="text-[12px]" style={{ color: "#6b6b70" }}>Caption + hashtags for your post</div></div>
-            <CopyButton text={fullPost} color={INK} label="Copy" />
+            <CopyButton text={fullPost} color={c.color} label="Copy" />
           </div>
           <div className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed" style={{ color: "#1b1b1f" }}>{brief.postDescription}</div>
           {brief.hashtags?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{brief.hashtags.map((h, k) => <span key={k} className="rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "#e7e4dc", color: "#3a3a40" }}>{h}</span>)}</div> : null}
