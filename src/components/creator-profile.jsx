@@ -26,6 +26,8 @@ export default function CreatorProfile({ userId, onBack }) {
   const [handle, setHandle] = useState("");
   const [followers, setFollowers] = useState("");
   const [busy, setBusy] = useState(false);
+  const [earnings, setEarnings] = useState(null);
+  const [earnLoading, setEarnLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +42,16 @@ export default function CreatorProfile({ userId, onBack }) {
       (data || []).forEach((r) => { map[r.platform] = r; });
       setAccounts(map);
       setLoading(false);
+      const tt = map.tiktok;
+      if (tt && tt.handle) {
+        setEarnLoading(true);
+        try {
+          const er = await fetch(`/api/earnings?handle=${encodeURIComponent(tt.handle)}`);
+          const ed = await er.json();
+          if (alive) setEarnings(ed.stats || null);
+        } catch { /* ignore */ }
+        if (alive) setEarnLoading(false);
+      }
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,6 +112,29 @@ export default function CreatorProfile({ userId, onBack }) {
           </div>
         )}
       </div>
+
+      {/* earnings */}
+      {accounts.tiktok && (
+        <div className="mt-4 rounded-2xl p-5" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: GREEN }}>Your sales &amp; commission</div>
+            {earnLoading && <Loader2 size={14} className="animate-spin" style={{ color: "#7a7a80" }} />}
+          </div>
+          {earnings ? (
+            <>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div><div className="text-2xl font-black" style={{ color: GREEN }}>${Math.round(earnings.commission || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Commission earned</div></div>
+                <div><div className="text-2xl font-black" style={{ color: PAPER }}>${Math.round(earnings.gmv || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Sales (GMV)</div></div>
+                <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(earnings.units || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Units sold</div></div>
+                <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(earnings.videos || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Videos posted</div></div>
+              </div>
+              <div className="mt-3 text-[11px]" style={{ color: "#6b6b70" }}>From your TikTok Shop affiliate activity (via Cruva).</div>
+            </>
+          ) : !earnLoading ? (
+            <div className="mt-2 text-[13px] leading-snug" style={{ color: "#8a8a90" }}>No sales tracked yet. Once your videos drive sales as a TikTok Shop affiliate, your commission shows up here.</div>
+          ) : null}
+        </div>
+      )}
 
       {/* platform connect cards */}
       <div className="mt-4 space-y-3">

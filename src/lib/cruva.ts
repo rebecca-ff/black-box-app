@@ -149,3 +149,35 @@ export function extractCreators(json: Json, limit = 40): Creator[] {
   walk(json, 0);
   return out;
 }
+
+const COMMISSION_KEYS = ["commission", "est_commission", "affiliate_commission", "commission_earned"];
+const UNITS_KEYS = ["units_sold", "units", "sold", "item_sold"];
+const VIDEOCNT_KEYS = ["video_count", "videos", "video_cnt", "post_count"];
+
+// Pull one creator's sales/commission stats from a crm/list response (we pass
+// the handle so the first creator-like object is the right one).
+export function extractCreatorStats(json: Json): {
+  handle: string; gmv: number | null; commission: number | null; units: number | null; videos: number | null; followers: number | null;
+} | null {
+  let found: Json = null;
+  const looks = (x: Json) => x && typeof x === "object" && HANDLE_KEYS.some((k) => typeof x[k] === "string");
+  const walk = (n: Json, d: number) => {
+    if (found || d > 6 || !n || typeof n !== "object") return;
+    if (Array.isArray(n)) {
+      for (const x of n) { if (found) return; if (looks(x)) { found = x; return; } walk(x, d + 1); }
+    } else {
+      for (const v of Object.values(n)) { if (found) return; walk(v, d + 1); }
+    }
+  };
+  walk(json, 0);
+  if (!found) return null;
+  const get = (keys: string[]) => { for (const k of keys) { if (found[k] != null) return found[k]; } return undefined; };
+  return {
+    handle: String(get(HANDLE_KEYS) || "").replace(/^@/, ""),
+    gmv: num(get(GMV_KEYS)),
+    commission: num(get(COMMISSION_KEYS)),
+    units: num(get(UNITS_KEYS)),
+    videos: num(get(VIDEOCNT_KEYS)),
+    followers: num(get(FOLLOWER_KEYS)),
+  };
+}
