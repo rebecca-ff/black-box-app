@@ -1,13 +1,19 @@
-// Cruva creator discovery — the external TikTok Shop creator pool brands
-// reach out to. Ported from the portal's client (x-api-key + x-shop-id).
-// Marketplace search returns creators by query; we extract them defensively
-// because the exact field names need a live call to confirm.
+// Cruva creator discovery — the external TikTok Shop creator pool.
+//
+// Cruva auth needs x-api-key + x-shop-id. The shop id is ONLY an auth
+// credential — `marketplace/search` returns Cruva's whole creator database
+// regardless of which shop authenticates. So callsheet needs no brand-specific
+// config: it auto-resolves a shop id from the account with just CRUVA_API_KEY
+// (an explicit CRUVA_SHOP_ID env still overrides if you ever want one).
 
 const BASE = "https://api.cruva.com/v1";
+const key = () => process.env.CRUVA_API_KEY ?? "";
 
-// Accept the plain name or the portal-style per-brand name, so it works
-// whichever way the env var was added.
-function shopId(): string {
+export function cruvaConfigured(): boolean {
+  return !!key();
+}
+
+function envShopId(): string {
   return (
     process.env.CRUVA_SHOP_ID ||
     process.env.CRUVA_SHOP_ID_SOVEREIGN_SILVER ||
@@ -17,36 +23,77 @@ function shopId(): string {
   );
 }
 
-function headers() {
-  return {
-    "x-api-key": process.env.CRUVA_API_KEY ?? "",
-    "x-shop-id": shopId(),
-    "Content-Type": "application/json",
-  };
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Json = any;
+
+export async function listShopsRaw() {
+  const res = await fetch(`${BASE}/account/shops`, {
+    method: "GET",
+    headers: { "x-api-key": key(), "Content-Type": "application/json" },
+  });
+  const raw = await res.text();
+  let json: Json = null;
+  try { json = JSON.parse(raw); } catch { /* keep raw */ }
+  return { ok: res.ok, status: res.status, raw, json };
 }
 
-export function cruvaConfigured(): boolean {
-  return !!(process.env.CRUVA_API_KEY && shopId());
+// Cruva shop ids look like 24-char hex (Mongo ObjectIds); match on that so we
+// don't grab some unrelated "id" field.
+const SHOPID_KEYS = ["shop_id", "shopId", "_id", "id", "cruva_shop_id"];
+function firstShopId(json: Json): string {
+  let found = "";
+  const walk = (n: Json, depth: number) => {
+    if (found || depth > 5 || !n || typeof n !== "object") return;
+    if (Array.isArray(n)) {
+      for (const x of n) {
+        if (found) return;
+        if (x && typeof x === "object") {
+          for (const k of SHOPID_KEYS) {
+            const v = x[k];
+            if (typeof v === "string" && /^[a-f0-9]{16,}$/i.test(v)) { found = v; return; }
+          }
+          walk(x, depth + 1);
+        }
+      }
+    } else {
+      for (const v of Object.values(n)) { if (found) return; walk(v, depth + 1); }
+    }
+  };
+  walk(json, 0);
+  return found;
+}
+
+let cachedShopId: string | undefined;
+export async function resolveShopId(): Promise<string> {
+  const env = envShopId();
+  if (env) return env;
+  if (cachedShopId) return cachedShopId;
+  try {
+    const { json } = await listShopsRaw();
+    cachedShopId = firstShopId(json);
+    return cachedShopId;
+  } catch {
+    return "";
+  }
 }
 
 export async function marketplaceSearch(query: string, pageSize = 30) {
+  const shopId = await resolveShopId();
   const res = await fetch(`${BASE}/affiliate/marketplace/search`, {
     method: "POST",
-    headers: headers(),
+    headers: { "x-api-key": key(), "x-shop-id": shopId, "Content-Type": "application/json" },
     body: JSON.stringify({ page_size: pageSize, page_number: 1, ...(query ? { query } : {}) }),
   });
   const raw = await res.text();
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  let json: any = null;
+  let json: Json = null;
   try { json = JSON.parse(raw); } catch { /* keep raw */ }
-  return { ok: res.ok, status: res.status, raw, json };
+  return { ok: res.ok, status: res.status, raw, json, shopId };
 }
 
 const HANDLE_KEYS = ["handle", "username", "creator_handle", "nickname", "unique_id", "creator_name", "name"];
 const FOLLOWER_KEYS = ["follower_count", "followers", "fans", "follower", "follower_cnt"];
 const GMV_KEYS = ["gmv", "total_gmv", "affiliate_gmv"];
 
-type Json = any;
 type Creator = { handle: string; followers: number | null; gmv: number | null };
 
 function num(v: unknown): number | null {
@@ -55,8 +102,6 @@ function num(v: unknown): number | null {
   return null;
 }
 
-// Walk the response for the first array of creator-like objects (any object
-// carrying a recognizable handle field) and normalize each.
 export function extractCreators(json: Json, limit = 40): Creator[] {
   const out: Creator[] = [];
   const seen = new Set<string>();
