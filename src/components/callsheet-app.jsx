@@ -298,6 +298,25 @@ function NewCampaign({ onCancel, onCreate }) {
 function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
   const link = `shop.tiktok.com/affiliate/${c.id}`;
   const dealLabel = c.dealType === "paid" ? (c.cpm ? `$${c.cpm} CPM` : "Paid") : `${c.commission}% commission`;
+  const [tab, setTab] = useState("editor");
+  const [slideBrief, setSlideBrief] = useState(null);
+  const [slideState, setSlideState] = useState("idle");
+  const conv = c.joinedCount ? Math.round((c.postedCount / c.joinedCount) * 100) : 0;
+
+  async function genSlideshow() {
+    setSlideState("loading");
+    try {
+      const res = await fetch("/api/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ campaign: c, format: "slideshow" }) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error("failed");
+      setSlideBrief(data); setSlideState("idle");
+    } catch { setSlideState("failed"); }
+  }
+
+  const aStat = (label, value, accent) => (
+    <div className="rounded-xl border bg-white px-4 py-3" style={{ borderColor: "#e6e3dc" }}><div className="text-2xl font-black" style={{ color: accent || "#0A0A0B" }}>{value}</div><span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>{label}</span></div>
+  );
+
   return (
     <div className="min-h-screen pb-12" style={{ backgroundColor: "#faf8f4" }}>
       <div className="px-5 pt-6"><button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#6b6b70" }}><ArrowLeft size={17} /> Campaigns</button></div>
@@ -316,14 +335,48 @@ function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
         </div>
       </div>
 
-      {c.status === "Live" && (
-        <div className="mx-5 mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border bg-white px-4 py-3" style={{ borderColor: "#e6e3dc" }}><div className="text-2xl font-black" style={{ color: "#0A0A0B" }}>{c.joinedCount}</div><span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>Joined</span></div>
-          <div className="rounded-xl border bg-white px-4 py-3" style={{ borderColor: "#e6e3dc" }}><div className="text-2xl font-black" style={{ color: "#0A0A0B" }}>{c.postedCount}</div><span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>Posted</span></div>
+      <div className="mx-5 mt-4 flex gap-1 rounded-xl border p-1" style={{ borderColor: "#e6e3dc", backgroundColor: "#fff" }}>
+        {[["editor", "Editor"], ["slideshows", "Slideshows"], ["analytics", "Analytics"]].map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)} className="flex-1 rounded-lg py-2 text-[13px] font-bold transition-colors" style={{ backgroundColor: tab === t ? "#0A0A0B" : "transparent", color: tab === t ? "#fff" : "#6b6b70" }}>{label}</button>
+        ))}
+      </div>
+
+      {tab === "analytics" && (
+        <div className="mx-5 mt-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {aStat("Joined", c.joinedCount)}
+            {aStat("Posted", c.postedCount)}
+            {aStat("Conversion", `${conv}%`, "#1f9d62")}
+            {aStat("Status", c.status)}
+          </div>
+          <div className="rounded-2xl border bg-white p-4" style={{ borderColor: "#e6e3dc" }}><div className="text-[13px] leading-snug" style={{ color: "#52504a" }}>Views, sales and per-creator commission for this campaign sync from the TikTok Shop affiliate API once connected. Joins &amp; posts are live now.</div></div>
         </div>
       )}
 
-      <div className="mx-5 mt-3 rounded-xl border bg-white px-3.5 py-3" style={{ borderColor: "#e6e3dc" }}><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: SYSTEM }}>Compliance guardrail</span><div className="mt-1 text-[13px] leading-snug" style={{ color: "#52504a" }}>{c.compliance}</div></div>
+      {tab === "slideshows" && (
+        <div className="mt-4">
+          <div className="px-5"><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a958c" }}>Slideshow playbook — faceless, text-over-image</span></div>
+          {slideState === "loading" ? (
+            <div className="py-16 text-center"><Loader2 size={22} className="mx-auto animate-spin" style={{ color: SYSTEM }} /><div className="mt-3 text-[15px] font-bold" style={{ color: "#0A0A0B" }}>Building the slideshow</div></div>
+          ) : slideBrief ? (
+            <div className="mt-3">
+              <SlideFlow c={c} brief={slideBrief} />
+              <div className="mx-5 mt-4"><button onClick={genSlideshow} className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border bg-white py-3 text-sm font-bold" style={{ borderColor: "#d8d3c9", color: "#0A0A0B" }}><RefreshCw size={15} /> Regenerate slideshow</button></div>
+            </div>
+          ) : (
+            <div className="mx-5 mt-3 rounded-2xl border border-dashed py-10 text-center" style={{ borderColor: "#d8d3c9" }}>
+              <div className="text-[15px] font-semibold" style={{ color: "#8a857c" }}>Faceless slideshow version</div>
+              <div className="mx-auto mt-1 max-w-[18rem] text-[13px]" style={{ color: "#9a958c" }}>Text-over-image slides, no talking to camera — for creators who don&apos;t show their face.</div>
+              <button onClick={genSlideshow} className="mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white" style={{ backgroundColor: SYSTEM }}><Sparkles size={16} /> Generate slideshow</button>
+              {slideState === "failed" && <div className="mt-3 text-[12px] font-semibold" style={{ color: SYSTEM }}>Didn&apos;t land. Try again.</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "editor" && (
+      <>
+      <div className="mx-5 mt-4 rounded-xl border bg-white px-3.5 py-3" style={{ borderColor: "#e6e3dc" }}><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: SYSTEM }}>Compliance guardrail</span><div className="mt-1 text-[13px] leading-snug" style={{ color: "#52504a" }}>{c.compliance}</div></div>
 
       <div className="mt-6">
         <div className="px-5"><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a958c" }}>Creator brief — what your affiliates receive</span></div>
@@ -356,6 +409,8 @@ function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

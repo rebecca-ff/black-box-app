@@ -22,7 +22,7 @@ function stripFences(t: string) {
   return t.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-function buildPrompt(c: Campaign, creatorVoice: string, hooks: string[]) {
+function buildPrompt(c: Campaign, creatorVoice: string, hooks: string[], format: string) {
   const hooksBlock = hooks.length
     ? `\nTOP-PERFORMING HOOKS IN THIS CATEGORY THIS WEEK (real TikTok Shop video openers, ranked by revenue). Study the PATTERN behind why these work and adapt the single strongest into a fresh hook for THIS brand. Never copy one verbatim, and never break compliance:\n${hooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}\n`
     : "";
@@ -36,6 +36,7 @@ DEAL: ${c.commission}% commission${c.sample ? ", free sample provided" : ", no s
 CREATIVE VIBE: ${c.vibe}
 COMPLIANCE (follow exactly, no exceptions): ${c.compliance}
 ${creatorVoice ? `CREATOR VOICE: adapt wording to this creator's natural style while keeping every shot's structure and all compliance intact: ${creatorVoice}` : ""}
+${format === "slideshow" ? "FORMAT: FACELESS SLIDESHOW — no talking to camera, no face on screen. Each shot is a photo or short b-roll clip and the bold on-screen TEXT carries the message. For each shot: 'action' = what to show; 'onscreen' = the bold text overlay (required, not empty); 'note' = a framing tip." : "FORMAT: talking-to-camera UGC (creator films themselves on camera)."}
 ${hooksBlock}
 The CTA must drive viewers to buy on the creator's TikTok Shop (product link / yellow basket), never off-platform.
 Voice: deadpan, specific, no aspirational filler, no influencer-speak.
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
 
   const creatorVoice =
     typeof body?.creatorVoice === "string" ? body.creatorVoice : "";
+  const format = body?.format === "slideshow" ? "slideshow" : "ugc";
 
   // Pull this week's top hooks for the category (no-op without KALODATA_API_KEY;
   // never blocks or fails generation).
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     const msg = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
-      messages: [{ role: "user", content: buildPrompt(c, creatorVoice, hooks) }],
+      messages: [{ role: "user", content: buildPrompt(c, creatorVoice, hooks, format) }],
     });
 
     const text = msg.content
