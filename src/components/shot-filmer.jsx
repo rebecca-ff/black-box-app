@@ -192,7 +192,9 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: "#000" }}>
+    // 100dvh (not inset-0/h-full) so the modal matches the *visible* mobile
+    // viewport — otherwise the bottom record controls sit behind the browser bar.
+    <div className="fixed inset-x-0 top-0 z-50" style={{ height: "100dvh", backgroundColor: "#000" }}>
       <div className="relative mx-auto h-full w-full max-w-md overflow-hidden" style={{ backgroundColor: "#000" }}>
 
         {/* top bar */}
@@ -232,7 +234,9 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
         {/* camera + teleprompter */}
         {phase === "ready" && (
           <>
-            <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+            {/* Mirror the front-camera preview so it reads like a mirror; the
+                recorded clip stays un-mirrored (correct orientation). */}
+            <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }} />
 
             {recording && (
               <div className="absolute left-1/2 top-16 z-20 -translate-x-1/2 rounded-full px-3 py-1 text-[13px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>● {fmt(seconds)}</div>
