@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { TIKTOK_SCOPES } from "@/lib/tiktok";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", clientKey);
-  url.searchParams.set("scope", "user.info.basic,user.info.profile,user.info.stats");
+  url.searchParams.set("scope", TIKTOK_SCOPES);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("redirect_uri", `${base}/api/tiktok/callback`);
   url.searchParams.set("state", state);

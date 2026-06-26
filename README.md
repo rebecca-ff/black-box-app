@@ -47,10 +47,32 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+# Supabase (persistence + auth)
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...        # server-only
+# TikTok Login Kit + Display API (connect account + live video metrics)
+TIKTOK_CLIENT_KEY=...
+TIKTOK_CLIENT_SECRET=...             # server-only
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 ```
 
-In Vercel, set the same variable under **Project → Settings → Environment
-Variables** (all environments, or at least Production + Preview).
+In Vercel, set the same variables under **Project → Settings → Environment
+Variables** (all environments, or at least Production + Preview). Register
+`<APP_URL>/api/tiktok/callback` as the redirect URI in your TikTok app, and run
+`supabase/tiktok-schema.sql` so the token store + video↔brand links exist.
+
+### Direct TikTok connection (no Cruva)
+
+Creators connect TikTok via real Login Kit OAuth (`/api/tiktok/auth` →
+`/api/tiktok/callback`). The callback stores their handle + follower count and
+their OAuth tokens **server-side only** (`tiktok_tokens`, RLS with no policies).
+The profile then calls `/api/tiktok/videos`, which reads those tokens (refreshing
+when expired) and pulls **real-time video metrics — views, likes, comments,
+shares — straight from TikTok's Display API**. Creators tag each video to a brand
+campaign they joined here, so performance rolls up per brand. Sales/commission
+($GMV) remain a separate self-report ledger, since that data isn't in the
+Display API.
 
 ---
 
@@ -72,15 +94,33 @@ Run locally only if you install Node: `npm install` then `npm run dev`.
 
 ---
 
+## Multi-tenant: real brands & creators
+
+When Supabase Auth is configured, **signed-in accounts never see the demo seed
+brands**. A brand sees only its own campaigns + product catalog; a creator sees
+the live marketplace. The seed portfolio only renders in anonymous demo mode
+(no auth).
+
+- **Brand catalog** — each brand sets its name and manages a **products** table
+  (its catalog) under the **Products** tab: add/edit/archive products and act on
+  incoming sample requests. Products added manually now; the TikTok Shop import
+  (next phase) writes into the same table with `source='tiktok_shop'`.
+- **Creator shop** — the **Shop** tab lists every brand's active products across
+  the platform, with search + brand filters, and a one-tap **Request free
+  sample** (writes `sample_requests`, which the brand acts on).
+- Run `supabase/catalog-schema.sql` to create `products` + `sample_requests`
+  (RLS: brands own their products, creators browse all active products and own
+  their requests).
+
 ## What's real vs. mocked (MVP honesty)
 
-This is a working front-to-back MVP for the **brief experience**. The
-**marketplace state is in-memory** — it resets on refresh. Specifically:
+This is a working front-to-back MVP for the **brief experience**. In anonymous
+demo mode the **marketplace state is in-memory** — it resets on refresh:
 
 - Campaigns, joins, posts, and sample requests live in React state (seeded with
   your portfolio: Sovereign Silver, Fifth & Fido, Contour Cube, Skimpies, Arber,
   doust.). Sovereign Silver and doust. ship pre-published so the creator feed
-  isn't empty.
+  isn't empty. (Signed-in accounts use Supabase instead — no seed.)
 - The affiliate link (`shop.tiktok.com/affiliate/...`) is a placeholder.
 - The compliance guardrail is a **soft** prompt rule, not a hard claims filter.
 
