@@ -7,6 +7,7 @@ import CreatorProfile from "./creator-profile";
 import Community from "./community";
 import BrandDiscover from "./brand-discover";
 import BrandEarnings from "./brand-earnings";
+import CampaignBuilder from "./campaign-builder";
 import CreatorInvites from "./creator-invites";
 import HookLab from "./hook-lab";
 import { supabaseBrowser } from "@/lib/supabase-browser";
@@ -515,6 +516,10 @@ function mapRow(r) {
     color: r.color, ink: r.ink, vibe: r.vibe, compliance: r.compliance,
     status: r.status, brief: r.brief,
     joinedCount: r.joined_count ?? 0, postedCount: r.posted_count ?? 0,
+    dealType: r.deal_type ?? "commission", cpm: r.cpm ?? null, maxPayout: r.max_payout ?? null,
+    bonusPerPost: r.bonus_per_post ?? null, bonusesPerDay: r.bonuses_per_day ?? null,
+    budget: r.budget ?? null, startDate: r.start_date ?? null, endDate: r.end_date ?? null,
+    maxCreators: r.max_creators ?? null,
   };
 }
 
@@ -622,7 +627,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
         {role === "brand" && (
           <>
             {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} onEarnings={authRole === "brand" ? () => setBView("earnings") : undefined} />}
-            {bView === "new" && <NewCampaign onCancel={() => setBView("dash")} onCreate={createCampaign} />}
+            {bView === "new" && <CampaignBuilder onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
             {bView === "hooklab" && <HookLab userId={userId} onBack={() => setBView("dash")} />}

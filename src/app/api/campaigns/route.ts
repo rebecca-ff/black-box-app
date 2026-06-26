@@ -57,6 +57,15 @@ export async function POST(req: NextRequest) {
     compliance: c.compliance ?? null,
     status: c.status ?? "Draft",
     brief: c.brief ?? null,
+    deal_type: c.dealType ?? "commission",
+    cpm: c.cpm ?? null,
+    max_payout: c.maxPayout ?? null,
+    bonus_per_post: c.bonusPerPost ?? null,
+    bonuses_per_day: c.bonusesPerDay ?? null,
+    budget: c.budget ?? null,
+    start_date: c.startDate ?? null,
+    end_date: c.endDate ?? null,
+    max_creators: c.maxCreators ?? null,
   };
 
   const { data, error } = await db.from("campaigns").insert(row).select().single();
