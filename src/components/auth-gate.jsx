@@ -31,6 +31,20 @@ function Wordmark() {
   return <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>;
 }
 
+// Shown only in anonymous demo mode (Supabase Auth not configured). Makes it
+// obvious that the brand/creator toggle + sample brands are a preview, and that
+// real logins, per-brand catalogs, and TikTok connect turn on once Supabase is
+// wired up. See docs/SETUP.md.
+function DemoBanner() {
+  return (
+    <div className="sticky top-0 z-[60] w-full px-4 py-2.5 text-center" style={{ backgroundColor: SYSTEM, color: PAPER }}>
+      <span className="text-[12px] font-bold leading-snug">
+        Demo mode — sample data. Real login/logout, your own brands &amp; TikTok connect turn on once Supabase Auth is configured (see docs/SETUP.md).
+      </span>
+    </div>
+  );
+}
+
 export default function AuthGate() {
   const sb = supabaseBrowser();
   const enabled = authEnabled();
@@ -73,7 +87,7 @@ export default function AuthGate() {
     setRole(null); setPhase("unauth");
   }
 
-  if (phase === "demo") return <CallsheetApp />;
+  if (phase === "demo") return <><DemoBanner /><CallsheetApp /></>;
   if (phase === "loading") {
     return <Shell><div className="m-auto text-center"><Loader2 size={24} className="mx-auto animate-spin" style={{ color: SYSTEM }} /></div></Shell>;
   }
