@@ -94,15 +94,33 @@ Run locally only if you install Node: `npm install` then `npm run dev`.
 
 ---
 
+## Multi-tenant: real brands & creators
+
+When Supabase Auth is configured, **signed-in accounts never see the demo seed
+brands**. A brand sees only its own campaigns + product catalog; a creator sees
+the live marketplace. The seed portfolio only renders in anonymous demo mode
+(no auth).
+
+- **Brand catalog** — each brand sets its name and manages a **products** table
+  (its catalog) under the **Products** tab: add/edit/archive products and act on
+  incoming sample requests. Products added manually now; the TikTok Shop import
+  (next phase) writes into the same table with `source='tiktok_shop'`.
+- **Creator shop** — the **Shop** tab lists every brand's active products across
+  the platform, with search + brand filters, and a one-tap **Request free
+  sample** (writes `sample_requests`, which the brand acts on).
+- Run `supabase/catalog-schema.sql` to create `products` + `sample_requests`
+  (RLS: brands own their products, creators browse all active products and own
+  their requests).
+
 ## What's real vs. mocked (MVP honesty)
 
-This is a working front-to-back MVP for the **brief experience**. The
-**marketplace state is in-memory** — it resets on refresh. Specifically:
+This is a working front-to-back MVP for the **brief experience**. In anonymous
+demo mode the **marketplace state is in-memory** — it resets on refresh:
 
 - Campaigns, joins, posts, and sample requests live in React state (seeded with
   your portfolio: Sovereign Silver, Fifth & Fido, Contour Cube, Skimpies, Arber,
   doust.). Sovereign Silver and doust. ship pre-published so the creator feed
-  isn't empty.
+  isn't empty. (Signed-in accounts use Supabase instead — no seed.)
 - The affiliate link (`shop.tiktok.com/affiliate/...`) is a placeholder.
 - The compliance guardrail is a **soft** prompt rule, not a hard claims filter.
 

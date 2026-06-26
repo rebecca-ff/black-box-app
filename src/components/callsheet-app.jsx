@@ -9,6 +9,8 @@ import BrandDiscover from "./brand-discover";
 import BrandEarnings from "./brand-earnings";
 import CampaignBuilder from "./campaign-builder";
 import CreatorInvites from "./creator-invites";
+import CreatorShop from "./creator-shop";
+import BrandProducts from "./brand-products";
 import HookLab from "./hook-lab";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
@@ -198,7 +200,7 @@ function SlideFlow({ c, brief }) {
 
 // ============================ BRAND SIDE =====================================
 
-function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab, onEarnings }) {
+function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab, onEarnings, onProducts }) {
   const live = campaigns.filter((c) => c.status === "Live").length;
   const lightPill = { backgroundColor: "#fff", color: "#0A0A0B", border: "1px solid #e6e3dc" };
   const dealLabel = (c) => (c.dealType === "paid" ? (c.cpm ? `$${c.cpm} CPM` : "Paid") : `${c.commission}%`);
@@ -208,6 +210,7 @@ function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommun
         <div className="text-3xl font-black tracking-tight" style={{ color: "#0A0A0B" }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {onHookLab && <button onClick={onHookLab} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: "#fff" }}>✨ Hooks</button>}
+          {onProducts && <button onClick={onProducts} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Products</button>}
           {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Find creators</button>}
           {onEarnings && <button onClick={onEarnings} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Earnings</button>}
           {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Community</button>}
@@ -417,7 +420,7 @@ function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
 
 // ============================ CREATOR SIDE ===================================
 
-function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile, onCommunity, onInvites, onHooks }) {
+function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJoin, onSignOut, onProfile, onCommunity, onInvites, onHooks, onShop }) {
   const live = campaigns.filter((c) => c.status === "Live" && c.brief);
   const discover = live.filter((c) => !creator.joined.includes(c.id));
   const joined = live.filter((c) => creator.joined.includes(c.id));
@@ -428,6 +431,7 @@ function CreatorFeed({ campaigns, creator, role, onRole, tab, onTab, onOpen, onJ
         <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {onHooks && <button onClick={onHooks} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>✨ Hooks</button>}
+          {onShop && <button onClick={onShop} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Shop</button>}
           {onInvites && <button onClick={onInvites} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Invites</button>}
           {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
           {onProfile && <button onClick={onProfile} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Profile</button>}
@@ -603,7 +607,10 @@ function getCreatorKey() {
 }
 
 export default function App({ authRole, userId, onSignOut } = {}) {
-  const [campaigns, setCampaigns] = useState(SEED);
+  // Real, signed-in accounts never see the demo seed brands — a brand sees only
+  // its own campaigns, a creator sees the live marketplace. SEED is anonymous
+  // demo mode only.
+  const [campaigns, setCampaigns] = useState(authRole ? [] : SEED);
   const [role, setRole] = useState(authRole || "brand");
   const [community, setCommunity] = useState(false);
   const [hookFilm, setHookFilm] = useState(null);
@@ -696,18 +703,20 @@ export default function App({ authRole, userId, onSignOut } = {}) {
       <div className="mx-auto min-h-screen w-full max-w-md" style={{ backgroundColor: INK }}>
         {role === "brand" && (
           <>
-            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} onEarnings={authRole === "brand" ? () => setBView("earnings") : undefined} />}
+            {bView === "dash" && <BrandDash campaigns={campaigns} role={role} onRole={switchRole} onOpen={bOpenC} onNew={() => setBView("new")} onSignOut={authRole ? onSignOut : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onDiscover={authRole === "brand" ? () => setBView("discover") : undefined} onHookLab={() => setBView("hooklab")} onEarnings={authRole === "brand" ? () => setBView("earnings") : undefined} onProducts={authRole === "brand" && userId ? () => setBView("products") : undefined} />}
             {bView === "new" && <CampaignBuilder onCancel={() => setBView("dash")} onCreate={createCampaign} />}
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
             {bView === "hooklab" && <HookLab userId={userId} onBack={() => setBView("dash")} />}
             {bView === "earnings" && <BrandEarnings userId={userId} onBack={() => setBView("dash")} />}
+            {bView === "products" && <BrandProducts userId={userId} onBack={() => setBView("dash")} />}
           </>
         )}
         {role === "creator" && (
           <>
-            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} onHooks={() => setCView("hooklab")} />}
+            {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} onHooks={() => setCView("hooklab")} onShop={authRole === "creator" && userId ? () => setCView("shop") : undefined} />}
             {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} userId={userId} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onFilmed={markFilmed} onOpenHookLab={() => setCView("hooklab")} />}
+            {cView === "shop" && <CreatorShop userId={userId} onBack={() => setCView("feed")} />}
             {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} brands={campaigns.filter((c) => creator.joined.includes(c.id)).map((c) => ({ id: String(c.id), name: c.name, color: c.color }))} />}
             {cView === "invites" && <CreatorInvites userId={userId} onBack={() => setCView("feed")} />}
             {cView === "hooklab" && <HookLab creatorMode userId={userId} onFilm={filmHook} onBack={() => setCView("feed")} />}
