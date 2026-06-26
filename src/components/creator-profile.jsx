@@ -179,7 +179,11 @@ export default function CreatorProfile({ userId, onBack }) {
                     {a ? <div className="text-[12px] font-semibold" style={{ color: "#8a8a90" }}>@{a.handle}{a.follower_count != null ? ` · ${a.follower_count.toLocaleString()} followers` : ""}</div> : <div className="text-[12px]" style={{ color: "#6b6b70" }}>Not linked</div>}
                   </div>
                 </div>
-                {!isEditing && <button onClick={() => startEdit(p.key)} className="rounded-full px-3.5 py-2 text-[13px] font-bold" style={{ backgroundColor: a ? "#16161a" : SYSTEM, color: a ? "#9a9aa0" : PAPER, border: a ? "1px solid #2a2a30" : "none" }}>{a ? "Edit" : "Connect"}</button>}
+                {!isEditing && (
+                  p.key === "tiktok" && !a
+                    ? <a href={`/api/tiktok/auth?u=${encodeURIComponent(userId || "")}`} className="rounded-full px-3.5 py-2 text-[13px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>Connect TikTok</a>
+                    : <button onClick={() => startEdit(p.key)} className="rounded-full px-3.5 py-2 text-[13px] font-bold" style={{ backgroundColor: a ? "#16161a" : SYSTEM, color: a ? "#9a9aa0" : PAPER, border: a ? "1px solid #2a2a30" : "none" }}>{a ? "Edit" : "Connect"}</button>
+                )}
               </div>
 
               {isEditing && (
@@ -199,7 +203,7 @@ export default function CreatorProfile({ userId, onBack }) {
 
       <div className="mt-5 flex items-start gap-2 rounded-xl px-3.5 py-3" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
         <Sparkles size={15} style={{ color: SYSTEM, marginTop: 2 }} />
-        <div className="text-[12px] leading-snug" style={{ color: "#8a8a90" }}>One-tap linking (auto follower count, no typing) is coming once TikTok &amp; Meta app access is set up. For now, enter your handle and follower count.</div>
+        <div className="text-[12px] leading-snug" style={{ color: "#8a8a90" }}>TikTok connects through TikTok&apos;s real login and pulls your handle + follower count automatically (once the TikTok app is approved). Instagram is manual for now.</div>
       </div>
     </div>
   );
