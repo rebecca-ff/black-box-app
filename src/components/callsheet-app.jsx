@@ -626,15 +626,16 @@ export default function App({ authRole, userId, onSignOut } = {}) {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch("/api/campaigns");
+        // Multi-tenant: a brand loads only THEIR campaigns; a creator loads the
+        // live marketplace. Real accounts never see the demo seed.
+        const scope = authRole === "creator" ? "marketplace=1" : `owner=${encodeURIComponent(userId || "")}`;
+        const res = await fetch(`/api/campaigns?${scope}`);
         const data = await res.json();
-        if (!alive || !data || !data.enabled) return; // not configured -> SEED
+        if (!alive || !data || !data.enabled) return; // not configured -> demo SEED
         setEnabled(true);
 
-        // The server seeds the starter brands idempotently, so just take what
-        // GET returns — no client-side seeding (that was racing into duplicates).
         const rows = Array.isArray(data.campaigns) ? data.campaigns.map(mapRow) : [];
-        if (alive && rows.length) setCampaigns(rows);
+        if (alive) setCampaigns(rows);
 
         const pRes = await fetch(`/api/participations?creator=${encodeURIComponent(creatorKey.current)}`);
         const pData = await pRes.json();
@@ -664,7 +665,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
   const createCampaign = async (c) => {
     if (enabled) {
       try {
-        const res = await fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(c) });
+        const res = await fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...c, ownerId: userId }) });
         const data = await res.json();
         if (data && data.campaign) { const m = mapRow(data.campaign); setCampaigns((cs) => [m, ...cs]); bOpenC(m.id); return; }
       } catch { /* fall back to local */ }

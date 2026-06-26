@@ -1,30 +1,23 @@
 import { type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { SEED_ROWS } from "@/lib/seed";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/campaigns — list all campaigns. { enabled } tells the client whether
-// persistence is on; when off it falls back to its in-memory seed.
-export async function GET() {
+// GET /api/campaigns — multi-tenant. ?owner=<id> returns that brand's own
+// campaigns; ?marketplace=1 returns live campaigns (the creator feed). No seed —
+// real brands create their own campaigns, so no fake brands appear.
+export async function GET(req: NextRequest) {
   const db = supabaseAdmin();
   if (!db) return Response.json({ enabled: false, campaigns: [] });
 
-  // Idempotent seed of the starter brands. Fixed ids mean a re-run (or a race
-  // between two first-load requests) hits a PK conflict and is ignored — so the
-  // six brands can never duplicate.
-  const { count } = await db
-    .from("campaigns")
-    .select("id", { count: "exact", head: true });
-  if (!count) {
-    await db.from("campaigns").upsert(SEED_ROWS, { onConflict: "id", ignoreDuplicates: true });
-  }
+  const owner = req.nextUrl.searchParams.get("owner");
+  const marketplace = req.nextUrl.searchParams.get("marketplace");
+  if (!owner && !marketplace) return Response.json({ enabled: true, campaigns: [] });
 
-  const { data, error } = await db
-    .from("campaigns")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let query = db.from("campaigns").select("*").order("created_at", { ascending: false });
+  query = owner ? query.eq("owner_id", owner) : query.eq("status", "Live");
 
+  const { data, error } = await query;
   if (error) {
     return Response.json({ enabled: true, campaigns: [], error: error.message }, { status: 500 });
   }
@@ -42,6 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   const row = {
+    owner_id: c.ownerId ?? null,
     name: String(c.name),
     product: String(c.product),
     category: c.category ?? null,
