@@ -626,7 +626,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
             {bView === "detail" && bCampaign && <BrandDetail c={bCampaign} state={genState} onBack={() => setBView("dash")} onGenerate={generate} onPublish={publish} />}
             {bView === "discover" && <BrandDiscover userId={userId} onBack={() => setBView("dash")} />}
             {bView === "hooklab" && <HookLab userId={userId} onBack={() => setBView("dash")} />}
-            {bView === "earnings" && <BrandEarnings onBack={() => setBView("dash")} />}
+            {bView === "earnings" && <BrandEarnings userId={userId} onBack={() => setBView("dash")} />}
           </>
         )}
         {role === "creator" && (
