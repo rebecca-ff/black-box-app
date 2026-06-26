@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { storeTikTokToken } from "@/lib/tiktok";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,10 @@ export async function GET(req: NextRequest) {
     const token = await tokenRes.json();
     const accessToken = token?.access_token;
     if (!accessToken) return Response.redirect(`${base}/?tiktok=error`, 302);
+
+    // Persist the tokens (server-only) so we can read this creator's live video
+    // metrics from TikTok's Display API on their behalf later.
+    if (userId) await storeTikTokToken(userId, token);
 
     // 2. real handle + follower count
     const infoRes = await fetch(

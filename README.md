@@ -47,10 +47,32 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+# Supabase (persistence + auth)
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...        # server-only
+# TikTok Login Kit + Display API (connect account + live video metrics)
+TIKTOK_CLIENT_KEY=...
+TIKTOK_CLIENT_SECRET=...             # server-only
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 ```
 
-In Vercel, set the same variable under **Project → Settings → Environment
-Variables** (all environments, or at least Production + Preview).
+In Vercel, set the same variables under **Project → Settings → Environment
+Variables** (all environments, or at least Production + Preview). Register
+`<APP_URL>/api/tiktok/callback` as the redirect URI in your TikTok app, and run
+`supabase/tiktok-schema.sql` so the token store + video↔brand links exist.
+
+### Direct TikTok connection (no Cruva)
+
+Creators connect TikTok via real Login Kit OAuth (`/api/tiktok/auth` →
+`/api/tiktok/callback`). The callback stores their handle + follower count and
+their OAuth tokens **server-side only** (`tiktok_tokens`, RLS with no policies).
+The profile then calls `/api/tiktok/videos`, which reads those tokens (refreshing
+when expired) and pulls **real-time video metrics — views, likes, comments,
+shares — straight from TikTok's Display API**. Creators tag each video to a brand
+campaign they joined here, so performance rolls up per brand. Sales/commission
+($GMV) remain a separate self-report ledger, since that data isn't in the
+Display API.
 
 ---
 

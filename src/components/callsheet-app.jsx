@@ -708,7 +708,7 @@ export default function App({ authRole, userId, onSignOut } = {}) {
           <>
             {cView === "feed" && <CreatorFeed campaigns={campaigns} creator={creator} role={role} onRole={switchRole} tab={cTab} onTab={setCTab} onOpen={openBrief} onJoin={join} onSignOut={authRole ? onSignOut : undefined} onProfile={authRole === "creator" && userId ? () => setCView("profile") : undefined} onCommunity={authRole ? () => setCommunity(true) : undefined} onInvites={authRole === "creator" && userId ? () => setCView("invites") : undefined} onHooks={() => setCView("hooklab")} />}
             {cView === "brief" && cCampaign && <CreatorBrief c={cCampaign} creator={creator} userId={userId} onBack={() => setCView("feed")} onSample={requestSample} onPost={markPosted} onFilmed={markFilmed} onOpenHookLab={() => setCView("hooklab")} />}
-            {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} />}
+            {cView === "profile" && <CreatorProfile userId={userId} onBack={() => setCView("feed")} brands={campaigns.filter((c) => creator.joined.includes(c.id)).map((c) => ({ id: String(c.id), name: c.name, color: c.color }))} />}
             {cView === "invites" && <CreatorInvites userId={userId} onBack={() => setCView("feed")} />}
             {cView === "hooklab" && <HookLab creatorMode userId={userId} onFilm={filmHook} onBack={() => setCView("feed")} />}
           </>
