@@ -611,8 +611,11 @@ export default function App({ authRole, userId, onSignOut } = {}) {
   const [bView, setBView] = useState("dash");
   const [bOpen, setBOpen] = useState(null);
   const [genState, setGenState] = useState("idle");
-  // creator nav
-  const [cView, setCView] = useState("feed");
+  // creator nav — land on the profile when returning from TikTok OAuth so the
+  // creator sees the connect result (?tiktok=connected|error|unconfigured).
+  const [cView, setCView] = useState(() =>
+    typeof window !== "undefined" && /[?&]tiktok=/.test(window.location.search) ? "profile" : "feed",
+  );
   const [cOpen, setCOpen] = useState(null);
   const [cTab, setCTab] = useState("discover");
   const [creator, setCreator] = useState({ joined: [], posted: [], samples: [], filmed: [], remixes: {} });

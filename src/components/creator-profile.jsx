@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader2, Check, Link2, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Check, Link2, ExternalLink, Sparkles, RefreshCw, AlertTriangle, X } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
 // Creator profile: link TikTok / Instagram and track progress to the 1,000-
 // follower TikTok-affiliate threshold. Reads/writes connected_accounts directly
-// via the browser client (RLS scopes rows to the signed-in creator). Follower
-// count is entered for now; real OAuth + auto-count comes when the dev apps exist.
+// via the browser client (RLS scopes rows to the signed-in creator). TikTok
+// connects through real Login Kit OAuth (/api/tiktok/auth) which writes back the
+// handle + follower count; once connected, sales auto-sync from TikTok Shop
+// affiliate (Cruva) via /api/earnings?handle=.
 
 const PAPER = "#F5F3EF";
 const SYSTEM = "#FF3B1D";
@@ -27,12 +29,28 @@ export default function CreatorProfile({ userId, onBack }) {
   const [followers, setFollowers] = useState("");
   const [busy, setBusy] = useState(false);
   const [earnings, setEarnings] = useState(null);
-  const [earnLoading, setEarnLoading] = useState(false);
+  const [shopSales, setShopSales] = useState(null); // synced TikTok Shop affiliate stats
+  const [syncing, setSyncing] = useState(false);
+  const [syncErr, setSyncErr] = useState("");
+  const [notice, setNotice] = useState(null); // OAuth result banner: connected|error|unconfigured
   const [showLog, setShowLog] = useState(false);
   const [gmvIn, setGmvIn] = useState("");
   const [commIn, setCommIn] = useState("");
   const [unitsIn, setUnitsIn] = useState("");
   const [savingLog, setSavingLog] = useState(false);
+
+  // Surface the result of the TikTok OAuth round-trip (the callback redirects to
+  // /?tiktok=connected|error|unconfigured), then strip the param so a refresh is clean.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const status = new URLSearchParams(window.location.search).get("tiktok");
+    if (status === "connected" || status === "error" || status === "unconfigured") {
+      setNotice(status);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("tiktok");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +66,8 @@ export default function CreatorProfile({ userId, onBack }) {
       setAccounts(map);
       setLoading(false);
       loadEarnings();
+      // Connected? Pull real TikTok Shop affiliate sales for that handle.
+      if (map.tiktok?.handle) syncShopSales(map.tiktok.handle);
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,6 +94,8 @@ export default function CreatorProfile({ userId, onBack }) {
     setAccounts(map);
     setEditing(null);
     setBusy(false);
+    // Manually linking a TikTok handle should also pull its TikTok Shop sales.
+    if (p === "tiktok" && map.tiktok?.handle) syncShopSales(map.tiktok.handle);
   }
 
   async function loadEarnings() {
@@ -83,6 +105,32 @@ export default function CreatorProfile({ userId, onBack }) {
       setEarnings(data.reduce((a, r) => ({ gmv: a.gmv + (+r.gmv || 0), commission: a.commission + (+r.commission || 0), units: a.units + (+r.units || 0), sales: a.sales + 1 }), { gmv: 0, commission: 0, units: 0, sales: 0 }));
     } else {
       setEarnings(null);
+    }
+  }
+
+  // Pull this creator's real TikTok Shop affiliate sales (GMV, commission, units,
+  // videos) for the connected handle from /api/earnings (Cruva roster).
+  async function syncShopSales(handle) {
+    const h = (handle || accounts.tiktok?.handle || "").replace(/^@/, "").trim();
+    if (!h) return;
+    setSyncing(true);
+    setSyncErr("");
+    try {
+      const res = await fetch(`/api/earnings?handle=${encodeURIComponent(h)}`);
+      const data = await res.json();
+      if (!data?.configured) {
+        setSyncErr("TikTok Shop sync isn't configured yet.");
+        setShopSales(null);
+      } else if (data.stats) {
+        setShopSales(data.stats);
+      } else {
+        setShopSales(null);
+        setSyncErr("No TikTok Shop sales found for @" + h + " yet.");
+      }
+    } catch {
+      setSyncErr("Couldn't reach TikTok Shop. Try again.");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -110,6 +158,22 @@ export default function CreatorProfile({ userId, onBack }) {
       <div className="mt-4 text-2xl font-black tracking-tight" style={{ color: PAPER }}>Your accounts</div>
       <p className="mt-1 text-[14px]" style={{ color: "#8a8a90" }}>Link your socials and grow toward TikTok affiliate eligibility.</p>
 
+      {/* OAuth round-trip result */}
+      {notice && (
+        <div className="mt-4 flex items-start gap-2 rounded-xl px-3.5 py-3" style={{
+          backgroundColor: notice === "connected" ? "#0f1d16" : "#1d1210",
+          border: `1px solid ${notice === "connected" ? GREEN : SYSTEM}`,
+        }}>
+          {notice === "connected" ? <Check size={16} style={{ color: GREEN, marginTop: 1 }} /> : <AlertTriangle size={16} style={{ color: SYSTEM, marginTop: 1 }} />}
+          <div className="flex-1 text-[13px] leading-snug" style={{ color: "#d6d6dc" }}>
+            {notice === "connected" && <><span style={{ color: GREEN, fontWeight: 800 }}>TikTok connected.</span> Your handle and follower count are linked — sales now sync from TikTok Shop affiliate.</>}
+            {notice === "error" && <><span style={{ color: SYSTEM, fontWeight: 800 }}>Couldn&apos;t connect TikTok.</span> The authorization didn&apos;t complete. Tap Connect TikTok to try again.</>}
+            {notice === "unconfigured" && <><span style={{ color: SYSTEM, fontWeight: 800 }}>TikTok login isn&apos;t set up yet.</span> Add your handle manually below for now — real login turns on once the TikTok app is approved.</>}
+          </div>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss" style={{ color: "#8a8a90" }}><X size={15} /></button>
+        </div>
+      )}
+
       {/* 1k qualification meter */}
       <div className="mt-5 rounded-2xl p-5" style={{ backgroundColor: eligible ? "#0f1d16" : "#101216", border: `1px solid ${eligible ? GREEN : "#23252b"}` }}>
         <div className="flex items-center justify-between">
@@ -132,12 +196,35 @@ export default function CreatorProfile({ userId, onBack }) {
         )}
       </div>
 
-      {/* earnings — native ledger (not Cruva) */}
+      {/* earnings — synced TikTok Shop sales (Cruva) with a self-report fallback ledger */}
       <div className="mt-4 rounded-2xl p-5" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
         <div className="flex items-center justify-between">
           <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: GREEN }}>Your sales &amp; commission</div>
-          <button onClick={() => setShowLog((v) => !v)} className="text-[12px] font-bold" style={{ color: SYSTEM }}>{showLog ? "Cancel" : "Log a sale"}</button>
+          <div className="flex items-center gap-3">
+            {tt?.handle && (
+              <button onClick={() => syncShopSales()} disabled={syncing} className="inline-flex items-center gap-1 text-[12px] font-bold disabled:opacity-50" style={{ color: GREEN }}>
+                {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync
+              </button>
+            )}
+            <button onClick={() => setShowLog((v) => !v)} className="text-[12px] font-bold" style={{ color: SYSTEM }}>{showLog ? "Cancel" : "Log a sale"}</button>
+          </div>
         </div>
+
+        {shopSales && (
+          <div className="mt-3 rounded-xl p-3.5" style={{ backgroundColor: "#0f1d16", border: `1px solid ${GREEN}` }}>
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: GREEN }}><Check size={12} /> Synced from TikTok Shop · @{tt?.handle}</div>
+            <div className="mt-2.5 grid grid-cols-2 gap-3">
+              <div><div className="text-2xl font-black" style={{ color: GREEN }}>${Math.round(shopSales.commission || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Commission earned</div></div>
+              <div><div className="text-2xl font-black" style={{ color: PAPER }}>${Math.round(shopSales.gmv || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Sales (GMV)</div></div>
+              <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(shopSales.units || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Units sold</div></div>
+              <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(shopSales.videos || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Videos posted</div></div>
+            </div>
+          </div>
+        )}
+
+        {syncErr && !shopSales && (
+          <div className="mt-3 text-[12px] leading-snug" style={{ color: "#8a8a90" }}>{syncErr}</div>
+        )}
 
         {showLog && (
           <div className="mt-3 space-y-2">
@@ -151,17 +238,18 @@ export default function CreatorProfile({ userId, onBack }) {
 
         {earnings ? (
           <>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#6b6b70" }}>{shopSales ? "Self-reported" : "Tracked earnings"}</div>
+            <div className="mt-2 grid grid-cols-2 gap-3">
               <div><div className="text-2xl font-black" style={{ color: GREEN }}>${Math.round(earnings.commission || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Commission earned</div></div>
               <div><div className="text-2xl font-black" style={{ color: PAPER }}>${Math.round(earnings.gmv || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Sales (GMV)</div></div>
               <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(earnings.units || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Units sold</div></div>
               <div><div className="text-2xl font-black" style={{ color: PAPER }}>{(earnings.sales || 0).toLocaleString()}</div><div className="text-[12px]" style={{ color: "#8a8a90" }}>Sales logged</div></div>
             </div>
-            <div className="mt-3 text-[11px]" style={{ color: "#6b6b70" }}>Your tracked earnings. Auto-syncs from TikTok Shop affiliate once your TikTok is connected.</div>
+            {!shopSales && <div className="mt-3 text-[11px]" style={{ color: "#6b6b70" }}>{tt?.handle ? "Self-reported earnings. Tap Sync to pull live numbers from TikTok Shop affiliate." : "Self-reported earnings. Connect TikTok below to auto-sync your real TikTok Shop sales."}</div>}
           </>
-        ) : (
-          <div className="mt-2 text-[13px] leading-snug" style={{ color: "#8a8a90" }}>No sales tracked yet. Log a sale above, or your commission auto-syncs once TikTok Shop affiliate is connected.</div>
-        )}
+        ) : !shopSales ? (
+          <div className="mt-2 text-[13px] leading-snug" style={{ color: "#8a8a90" }}>{tt?.handle ? "No sales tracked yet. Tap Sync to pull from TikTok Shop affiliate, or log a sale above." : "No sales tracked yet. Connect TikTok below to auto-sync your sales, or log one above."}</div>
+        ) : null}
       </div>
 
       {/* platform connect cards */}
