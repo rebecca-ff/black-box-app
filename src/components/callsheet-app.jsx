@@ -200,44 +200,49 @@ function SlideFlow({ c, brief }) {
 
 function BrandDash({ campaigns, role, onRole, onOpen, onNew, onSignOut, onCommunity, onDiscover, onHookLab, onEarnings }) {
   const live = campaigns.filter((c) => c.status === "Live").length;
+  const lightPill = { backgroundColor: "#fff", color: "#0A0A0B", border: "1px solid #e6e3dc" };
+  const dealLabel = (c) => (c.dealType === "paid" ? (c.cpm ? `$${c.cpm} CPM` : "Paid") : `${c.commission}%`);
   return (
-    <div className="px-5 pt-7 pb-12">
+    <div className="min-h-screen px-5 pt-7 pb-12" style={{ backgroundColor: "#faf8f4" }}>
       <div className="flex items-start justify-between">
-        <div className="text-3xl font-black tracking-tight" style={{ color: PAPER }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
+        <div className="text-3xl font-black tracking-tight" style={{ color: "#0A0A0B" }}>callsheet<span style={{ color: SYSTEM }}>.</span></div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {onHookLab && <button onClick={onHookLab} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>✨ Hooks</button>}
-          {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Find creators</button>}
-          {onEarnings && <button onClick={onEarnings} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Earnings</button>}
-          {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: PAPER, border: "1px solid #2a2a30" }}>Community</button>}
+          {onHookLab && <button onClick={onHookLab} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: SYSTEM, color: "#fff" }}>✨ Hooks</button>}
+          {onDiscover && <button onClick={onDiscover} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Find creators</button>}
+          {onEarnings && <button onClick={onEarnings} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Earnings</button>}
+          {onCommunity && <button onClick={onCommunity} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={lightPill}>Community</button>}
           {onSignOut
-            ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#16161a", color: "#8a8a90", border: "1px solid #2a2a30" }}>Sign out</button>
+            ? <button onClick={onSignOut} className="rounded-full px-3.5 py-1.5 text-[12px] font-bold" style={{ backgroundColor: "#fff", color: "#6b6b70", border: "1px solid #e6e3dc" }}>Sign out</button>
             : <RoleToggle role={role} onChange={onRole} />}
         </div>
       </div>
-      <p className="mt-2 text-[15px] leading-snug" style={{ color: "#9a9aa0" }}>Set the deal. AI writes the brief. Publish to your creators.</p>
-      <div className="mt-6 flex items-center gap-4"><Eyebrow style={{ color: "#6b6b70" }}>{campaigns.length} campaigns</Eyebrow><Eyebrow style={{ color: live ? GREEN : "#6b6b70" }}>{live} live</Eyebrow></div>
+      <p className="mt-2 text-[15px] leading-snug" style={{ color: "#6b6b70" }}>Set the deal. AI writes the brief. Publish to your creators.</p>
+      <div className="mt-5 flex items-center gap-4">
+        <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>{campaigns.length} campaigns</span>
+        <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: live ? "#1f9d62" : "#9a958c" }}>{live} live</span>
+      </div>
 
-      <div className="mt-4 space-y-3.5">
+      <div className="mt-4 space-y-3">
         {campaigns.map((c) => (
-          <button key={c.id} onClick={() => onOpen(c.id)} className="block w-full overflow-hidden rounded-2xl text-left transition-transform active:scale-[0.985]" style={{ backgroundColor: c.color, border: "1px solid rgba(0,0,0,0.25)" }}>
-            <div className="p-5" style={{ color: c.ink }}>
-              <div className="flex items-start justify-between gap-3">
-                <Eyebrow style={{ color: c.ink, opacity: 0.7 }}>{c.category}</Eyebrow>
-                <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: c.status === "Live" ? INK : "rgba(0,0,0,0.18)", color: c.status === "Live" ? GREEN : c.ink }}>{c.status}</span>
+          <button key={c.id} onClick={() => onOpen(c.id)} className="block w-full rounded-2xl border bg-white p-5 text-left transition-transform active:scale-[0.99]" style={{ borderColor: "#e6e3dc" }}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a958c" }}>{c.category}</span>
               </div>
-              <div className="mt-3 text-2xl font-black leading-none tracking-tight">{c.name}</div>
-              <div className="mt-1.5 text-[15px] font-semibold" style={{ opacity: 0.85 }}>{c.product}</div>
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                <Chip bg={INK} fg={c.color}>{c.commission}%</Chip>
-                {c.sample && <Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>Sample</Chip>}
-                <Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>{c.collab}</Chip>
-                <Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>{c.tier}</Chip>
-              </div>
-              {c.status === "Live" && <div className="mt-3 text-[12px] font-bold" style={{ color: c.ink, opacity: 0.8 }}>{c.joinedCount} joined · {c.postedCount} posted</div>}
+              <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: c.status === "Live" ? "#e7f7ee" : "#f0ede7", color: c.status === "Live" ? "#1f9d62" : "#8a857c" }}>{c.status}</span>
             </div>
+            <div className="mt-2.5 text-2xl font-black leading-none tracking-tight" style={{ color: "#0A0A0B" }}>{c.name}</div>
+            <div className="mt-1.5 text-[15px] font-semibold" style={{ color: "#6b6b70" }}>{c.product}</div>
+            <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: "#0A0A0B", color: "#fff" }}>{dealLabel(c)}</span>
+              {c.sample && <Chip bg="#f0ede7" fg="#6b6b70">Sample</Chip>}
+              <Chip bg="#f0ede7" fg="#6b6b70">{c.tier === "premium" ? "Premium" : c.tier === "basic" ? "Basic" : c.collab}</Chip>
+            </div>
+            {c.status === "Live" && <div className="mt-3 text-[12px] font-bold" style={{ color: "#8a857c" }}>{c.joinedCount} joined · {c.postedCount} posted</div>}
           </button>
         ))}
-        <button onClick={onNew} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-5 text-sm font-bold" style={{ borderColor: "#33333a", color: "#8a8a90" }}><Plus size={17} /> New campaign</button>
+        <button onClick={onNew} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-5 text-sm font-bold" style={{ borderColor: "#d8d3c9", color: "#8a857c" }}><Plus size={17} /> New campaign</button>
       </div>
     </div>
   );
@@ -292,53 +297,59 @@ function NewCampaign({ onCancel, onCreate }) {
 
 function BrandDetail({ c, onBack, onGenerate, onPublish, state }) {
   const link = `shop.tiktok.com/affiliate/${c.id}`;
+  const dealLabel = c.dealType === "paid" ? (c.cpm ? `$${c.cpm} CPM` : "Paid") : `${c.commission}% commission`;
   return (
-    <div className="pb-12">
-      <div className="px-5 pt-6"><button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#9a9aa0" }}><ArrowLeft size={17} /> Campaigns</button></div>
-      <div className="mx-5 mt-4 overflow-hidden rounded-2xl" style={{ backgroundColor: c.color }}>
-        <div className="p-5" style={{ color: c.ink }}>
-          <div className="flex items-start justify-between"><Eyebrow style={{ color: c.ink, opacity: 0.7 }}>{c.category}</Eyebrow>
-            <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: c.status === "Live" ? INK : "rgba(0,0,0,0.18)", color: c.status === "Live" ? GREEN : c.ink }}>{c.status}</span></div>
-          <div className="mt-2 text-2xl font-black tracking-tight">{c.name}</div>
-          <div className="text-[15px] font-semibold" style={{ opacity: 0.85 }}>{c.product}</div>
-          <div className="mt-4 flex flex-wrap gap-1.5"><Chip bg={INK} fg={c.color}>{c.commission}% commission</Chip>{c.sample && <Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>Free sample</Chip>}<Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>{c.collab}</Chip><Chip bg="rgba(0,0,0,0.18)" fg={c.ink}>{c.tier}</Chip></div>
+    <div className="min-h-screen pb-12" style={{ backgroundColor: "#faf8f4" }}>
+      <div className="px-5 pt-6"><button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#6b6b70" }}><ArrowLeft size={17} /> Campaigns</button></div>
+
+      <div className="mx-5 mt-4 rounded-2xl border bg-white p-5" style={{ borderColor: "#e6e3dc" }}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} /><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a958c" }}>{c.category}</span></div>
+          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: c.status === "Live" ? "#e7f7ee" : "#f0ede7", color: c.status === "Live" ? "#1f9d62" : "#8a857c" }}>{c.status}</span>
+        </div>
+        <div className="mt-2.5 text-2xl font-black tracking-tight" style={{ color: "#0A0A0B" }}>{c.name}</div>
+        <div className="text-[15px] font-semibold" style={{ color: "#6b6b70" }}>{c.product}</div>
+        <div className="mt-3.5 flex flex-wrap gap-1.5">
+          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: "#0A0A0B", color: "#fff" }}>{dealLabel}</span>
+          {c.sample && <Chip bg="#f0ede7" fg="#6b6b70">Free sample</Chip>}
+          <Chip bg="#f0ede7" fg="#6b6b70">{c.tier === "premium" ? "Premium" : c.tier === "basic" ? "Basic" : c.collab}</Chip>
         </div>
       </div>
 
       {c.status === "Live" && (
         <div className="mx-5 mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl px-4 py-3" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}><div className="text-2xl font-black" style={{ color: PAPER }}>{c.joinedCount}</div><Eyebrow style={{ color: "#7a7a80" }}>Joined</Eyebrow></div>
-          <div className="rounded-xl px-4 py-3" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}><div className="text-2xl font-black" style={{ color: PAPER }}>{c.postedCount}</div><Eyebrow style={{ color: "#7a7a80" }}>Posted</Eyebrow></div>
+          <div className="rounded-xl border bg-white px-4 py-3" style={{ borderColor: "#e6e3dc" }}><div className="text-2xl font-black" style={{ color: "#0A0A0B" }}>{c.joinedCount}</div><span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>Joined</span></div>
+          <div className="rounded-xl border bg-white px-4 py-3" style={{ borderColor: "#e6e3dc" }}><div className="text-2xl font-black" style={{ color: "#0A0A0B" }}>{c.postedCount}</div><span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "#9a958c" }}>Posted</span></div>
         </div>
       )}
 
-      <div className="mx-5 mt-3 rounded-xl px-3.5 py-3" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}><Eyebrow style={{ color: SYSTEM }}>Compliance guardrail</Eyebrow><div className="mt-1 text-[13px] leading-snug" style={{ color: "#bcbcc2" }}>{c.compliance}</div></div>
+      <div className="mx-5 mt-3 rounded-xl border bg-white px-3.5 py-3" style={{ borderColor: "#e6e3dc" }}><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: SYSTEM }}>Compliance guardrail</span><div className="mt-1 text-[13px] leading-snug" style={{ color: "#52504a" }}>{c.compliance}</div></div>
 
       <div className="mt-6">
-        <div className="px-5"><Eyebrow style={{ color: "#7a7a80" }}>Creator brief — what your affiliates receive</Eyebrow></div>
+        <div className="px-5"><span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a958c" }}>Creator brief — what your affiliates receive</span></div>
         {state === "idle" && !c.brief && (
-          <div className="mx-5 mt-3 rounded-2xl border border-dashed py-10 text-center" style={{ borderColor: "#2a2a30" }}>
-            <div className="text-[15px] font-semibold" style={{ color: "#9a9aa0" }}>No brief yet.</div>
-            <button onClick={onGenerate} className="mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold" style={{ backgroundColor: c.color, color: c.ink }}><Sparkles size={16} /> Write the brief</button>
+          <div className="mx-5 mt-3 rounded-2xl border border-dashed py-10 text-center" style={{ borderColor: "#d8d3c9" }}>
+            <div className="text-[15px] font-semibold" style={{ color: "#8a857c" }}>No brief yet.</div>
+            <button onClick={onGenerate} className="mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white" style={{ backgroundColor: SYSTEM }}><Sparkles size={16} /> Write the brief</button>
           </div>
         )}
-        {state === "generating" && <div className="py-16 text-center"><Loader2 size={22} className="mx-auto animate-spin" style={{ color: c.color }} /><div className="mt-3 text-[15px] font-bold" style={{ color: PAPER }}>Writing the brief</div><div className="mt-1 text-[13px]" style={{ color: "#8a8a90" }}>Inside the {c.name} rules</div></div>}
-        {state === "failed" && <div className="mx-5 mt-3 rounded-2xl border py-10 text-center" style={{ borderColor: "#2a2a30" }}><div className="text-[15px] font-bold" style={{ color: PAPER }}>The writer choked</div><button onClick={onGenerate} className="mt-3 rounded-full px-5 py-2.5 text-sm font-bold" style={{ backgroundColor: c.color, color: c.ink }}>Rewrite</button></div>}
+        {state === "generating" && <div className="py-16 text-center"><Loader2 size={22} className="mx-auto animate-spin" style={{ color: SYSTEM }} /><div className="mt-3 text-[15px] font-bold" style={{ color: "#0A0A0B" }}>Writing the brief</div><div className="mt-1 text-[13px]" style={{ color: "#8a857c" }}>Inside the {c.name} rules</div></div>}
+        {state === "failed" && <div className="mx-5 mt-3 rounded-2xl border py-10 text-center" style={{ borderColor: "#e6e3dc" }}><div className="text-[15px] font-bold" style={{ color: "#0A0A0B" }}>The writer choked</div><button onClick={onGenerate} className="mt-3 rounded-full px-5 py-2.5 text-sm font-bold text-white" style={{ backgroundColor: SYSTEM }}>Rewrite</button></div>}
         {state === "idle" && c.brief && (
           <div className="mt-3">
             <SlideFlow c={c} brief={c.brief} />
-            <div className="mx-5 mt-6 rounded-2xl p-5" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
+            <div className="mx-5 mt-6 rounded-2xl border bg-white p-5" style={{ borderColor: "#e6e3dc" }}>
               {c.status === "Live" ? (
                 <div>
-                  <div className="flex items-center gap-2"><Check size={16} style={{ color: GREEN }} /><span className="text-[15px] font-black" style={{ color: PAPER }}>Live for affiliates</span></div>
-                  <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-3" style={{ backgroundColor: "#0d0e11", border: "1px solid #26282e" }}><Link2 size={15} style={{ color: "#7a7a80" }} /><span className="flex-1 truncate text-[13px]" style={{ color: "#bcbcc2" }}>{link}</span><CopyButton text={link} color={c.color} label="Copy" /></div>
-                  <button onClick={onGenerate} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full py-3 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: PAPER }}><RefreshCw size={15} /> Rewrite</button>
+                  <div className="flex items-center gap-2"><Check size={16} style={{ color: "#1f9d62" }} /><span className="text-[15px] font-black" style={{ color: "#0A0A0B" }}>Live for affiliates</span></div>
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border px-3 py-3" style={{ backgroundColor: "#faf8f4", borderColor: "#e6e3dc" }}><Link2 size={15} style={{ color: "#9a958c" }} /><span className="flex-1 truncate text-[13px]" style={{ color: "#52504a" }}>{link}</span><CopyButton text={link} color={SYSTEM} label="Copy" /></div>
+                  <button onClick={onGenerate} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border py-3 text-sm font-bold" style={{ borderColor: "#d8d3c9", color: "#0A0A0B" }}><RefreshCw size={15} /> Rewrite</button>
                 </div>
               ) : (
                 <div>
-                  <div className="text-[15px] font-black" style={{ color: PAPER }}>Ready to send</div>
-                  <div className="mt-1 text-[13px]" style={{ color: "#8a8a90" }}>Publishing opens this to creators in the feed.</div>
-                  <div className="mt-4 flex gap-2"><button onClick={onGenerate} className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-3 text-sm font-bold" style={{ border: "1px solid #3a3a42", color: PAPER }}><RefreshCw size={15} /> Rewrite</button><button onClick={onPublish} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold" style={{ backgroundColor: c.color, color: c.ink }}><Send size={15} /> Publish</button></div>
+                  <div className="text-[15px] font-black" style={{ color: "#0A0A0B" }}>Ready to send</div>
+                  <div className="mt-1 text-[13px]" style={{ color: "#8a857c" }}>Publishing opens this to creators in the feed.</div>
+                  <div className="mt-4 flex gap-2"><button onClick={onGenerate} className="inline-flex items-center justify-center gap-1.5 rounded-full border px-4 py-3 text-sm font-bold" style={{ borderColor: "#d8d3c9", color: "#0A0A0B" }}><RefreshCw size={15} /> Rewrite</button><button onClick={onPublish} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white" style={{ backgroundColor: SYSTEM }}><Send size={15} /> Publish</button></div>
                 </div>
               )}
             </div>
