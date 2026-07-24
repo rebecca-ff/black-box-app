@@ -15,6 +15,20 @@ const SOV_BRIEF = {
   hashtags: ["#wellnessroutine", "#immunesupport", "#tiktokshopfinds", "#morningritual", "#dailywellness"],
 };
 
+const SOV_COPPER_BRIEF = {
+  concept: "POV: nobody told me the mineral my hair color is made from was a thing you could take",
+  shots: [
+    { title: "Shot 1", action: "Film yourself in the mirror, lifting a section of hair, catching the greys in the light.", onscreen: "nobody told me copper had anything to do with this", note: "Deadpan, in the mirror, no big reveal" },
+    { title: "Shot 2", action: "To camera: I was doing everything for my hair except the one mineral it's actually built from.", onscreen: "", note: "Dry, conversational" },
+    { title: "Shot 3", action: "Show the copper bottle, take the dropper, set it down. Simple.", onscreen: "copper hydrosol — 10 drops", note: "Support framing, never a fix" },
+    { title: "Shot 4", action: "Talk about staying consistent — hair, skin & nails routine for a few weeks.", onscreen: "week 6 of just being consistent", note: "How you feel about the routine, not a before/after" },
+    { title: "Shot 5", action: "Hold the bottle to camera and tap the yellow basket.", onscreen: "it's on my shop", note: "Point at the product link" },
+  ],
+  caption: "nobody told me copper had anything to do with this",
+  postDescription: "Adding copper to the hair, skin & nails routine.\nNot a magic fix — just the mineral my hair color is actually made from.",
+  hashtags: ["#greyhair", "#hairskinnails", "#coppermineral", "#beautyfromwithin", "#tiktokshopfinds", "#wellnessroutine"],
+};
+
 const DOUST_BRIEF = {
   concept: "POV: you switched to one ingredient and your shelf got quieter",
   shots: [
@@ -30,6 +44,7 @@ const DOUST_BRIEF = {
 
 export const SEED_ROWS = [
   { id: "00000000-0000-4000-8000-000000000001", name: "Sovereign Silver", product: "Bio-Active Silver Hydrosol", category: "Wellness", commission: 18, sample: true, collab: "Open", tier: "Micro", color: "#3B82F6", ink: "#091633", vibe: "Calm, editorial, science-forward", compliance: "No antimicrobial / kill / cure language. Daily wellness + immune support framing only.", status: "Live", brief: SOV_BRIEF },
+  { id: "00000000-0000-4000-8000-000000000007", name: "Sovereign Copper", product: "Bio-Active Copper Hydrosol", category: "Beauty", commission: 18, sample: true, collab: "Open", tier: "Micro", color: "#B87333", ink: "#2A1206", vibe: "Calm, editorial, beauty-from-within, science-forward", compliance: "No claims that it reverses, stops, restores, or cures grey hair. Copper as an essential trace mineral for hair, skin & nails only. Support framing, never treatment or before/after.", status: "Live", brief: SOV_COPPER_BRIEF },
   { id: "00000000-0000-4000-8000-000000000002", name: "doust.", product: "Whipped Tallow Balm", category: "Beauty", commission: 30, sample: true, collab: "Open", tier: "Nano", color: "#C46B3E", ink: "#2A1108", vibe: "Slow beauty, ingredient-forward, dry wit", compliance: "No acne / eczema treatment claims. Skin-feel and ritual framing only.", status: "Live", brief: DOUST_BRIEF },
   { id: "00000000-0000-4000-8000-000000000003", name: "Fifth & Fido", product: "Turkey Tail+ Chews", category: "Pet", commission: 25, sample: true, collab: "Targeted", tier: "Micro", color: "#E8A23D", ink: "#2E2006", vibe: "Warm, senior-dog love, founder voice", compliance: "No disease, lump, or cancer claims. Immune + senior vitality support only.", status: "Draft", brief: null },
   { id: "00000000-0000-4000-8000-000000000004", name: "Contour Cube", product: "Facial Ice Mold", category: "Beauty", commission: 20, sample: true, collab: "Open", tier: "Nano", color: "#67D3E0", ink: "#04262E", vibe: "Clean, cold-girl, morning routine", compliance: "It is an ice mold, never an ice roller. No medical skin claims.", status: "Draft", brief: null },
