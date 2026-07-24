@@ -42,6 +42,9 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
   const [seconds, setSeconds] = useState(0);
 
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+  const facingRef = useRef("user");
   const streamRef = useRef(null);
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -58,6 +61,43 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+  }
+
+  function stopDraw() {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+  }
+
+  // Paint the live camera frame onto the portrait 1080x1920 canvas with a
+  // center-crop "cover" fit, so a landscape camera feed still fills a vertical
+  // frame. The front camera is mirrored so preview and export both read as a
+  // selfie. Recording the canvas stream (not the raw track) guarantees the
+  // saved clip is vertical — fixing the sideways / horizontal export.
+  function startDraw() {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    stopDraw();
+    const render = () => {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (vw && vh) {
+        const scale = Math.max(cw / vw, ch / vh);
+        const dw = vw * scale;
+        const dh = vh * scale;
+        const dx = (cw - dw) / 2;
+        const dy = (ch - dh) / 2;
+        ctx.save();
+        if (facingRef.current === "user") { ctx.translate(cw, 0); ctx.scale(-1, 1); }
+        ctx.drawImage(video, dx, dy, dw, dh);
+        ctx.restore();
+      }
+      rafRef.current = requestAnimationFrame(render);
+    };
+    rafRef.current = requestAnimationFrame(render);
   }
 
   async function startCamera(face) {
@@ -91,16 +131,24 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
     startCamera(facing);
     return () => {
       stopStream();
+      stopDraw();
       if (timerRef.current) clearInterval(timerRef.current);
       Object.values(clipsRef.current).forEach((c) => c && c.url && URL.revokeObjectURL(c.url));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-bind the stream to the <video> element whenever we (re)enter "ready".
+  // Keep the mirror decision in a ref so the draw loop always reads the live value.
+  useEffect(() => { facingRef.current = facing; }, [facing]);
+
+  // Re-bind the stream to the <video> element whenever we (re)enter "ready",
+  // and (re)start the canvas compositor that forces a vertical 1080x1920 frame.
   useEffect(() => {
     if (phase === "ready" && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
+      startDraw();
+    } else {
+      stopDraw();
     }
   }, [phase]);
 
@@ -112,14 +160,30 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
     startCamera(f);
   }
 
+  // Build the stream we actually record: the portrait canvas (video) plus the
+  // camera's own audio track. Falls back to the raw camera stream if the
+  // browser can't capture a canvas stream.
+  function recordingStream() {
+    const canvas = canvasRef.current;
+    if (canvas && typeof canvas.captureStream === "function") {
+      const cs = canvas.captureStream(30);
+      const audio = streamRef.current ? streamRef.current.getAudioTracks() : [];
+      audio.forEach((t) => cs.addTrack(t));
+      return cs;
+    }
+    return streamRef.current;
+  }
+
   function startRec() {
     if (!streamRef.current || recording) return;
     const mime = pickMime();
+    const src = recordingStream();
+    if (!src) return;
     let rec;
     try {
       rec = mime
-        ? new MediaRecorder(streamRef.current, { mimeType: mime })
-        : new MediaRecorder(streamRef.current);
+        ? new MediaRecorder(src, { mimeType: mime })
+        : new MediaRecorder(src);
     } catch {
       setError("Recording isn't supported in this browser.");
       setPhase("error");
@@ -134,7 +198,7 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
       setClips((c) => {
         const prev = c[shotIndex];
         if (prev && prev.url) URL.revokeObjectURL(prev.url);
-        return { ...c, [shotIndex]: { url, mime: type } };
+        return { ...c, [shotIndex]: { url, mime: type, blob } };
       });
     };
     recRef.current = rec;
@@ -162,18 +226,58 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
     if (shotIndex > 0) setShotIndex(shotIndex - 1);
   }
 
+  function clipExt(clip) { return clip.mime.includes("mp4") ? "mp4" : "webm"; }
+
+  function clipFile(clip, i) {
+    const src = clip.blob || null;
+    if (!src) return null;
+    return new File([src], `callsheet-shot-${i + 1}.${clipExt(clip)}`, { type: clip.mime });
+  }
+
   function download(i) {
     const clip = clips[i];
     if (!clip) return;
-    const ext = clip.mime.includes("mp4") ? "mp4" : "webm";
     const a = document.createElement("a");
     a.href = clip.url;
-    a.download = `shot-${i + 1}.${ext}`;
+    a.download = `callsheet-shot-${i + 1}.${clipExt(clip)}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
   const downloadAll = () => list.forEach((_, i) => clips[i] && download(i));
+
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+
+  // Save every captured clip to the device. On phones the Web Share sheet
+  // exposes "Save Video" → writes straight to the photo library / camera roll.
+  // Desktop (or browsers without file-share) falls back to a normal download.
+  async function saveToPhotos() {
+    const files = list.map((_, i) => (clips[i] ? clipFile(clips[i], i) : null)).filter(Boolean);
+    if (!files.length) return;
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      const canShareFiles =
+        typeof navigator !== "undefined" &&
+        navigator.canShare &&
+        navigator.canShare({ files });
+      if (canShareFiles) {
+        await navigator.share({ files, title: "callsheet footage" });
+        setSaveMsg("Sent to your share sheet — pick “Save Video” to add them to your photos.");
+      } else {
+        downloadAll();
+        setSaveMsg("Saved to your downloads. On desktop, add them to your library from there.");
+      }
+    } catch (e) {
+      if (!(e && e.name === "AbortError")) {
+        downloadAll();
+        setSaveMsg("Couldn’t open the share sheet — saved to downloads instead.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function close() {
     stopStream();
@@ -232,7 +336,8 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
         {/* camera + teleprompter */}
         {phase === "ready" && (
           <>
-            <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+            <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }} />
+            <canvas ref={canvasRef} width={1080} height={1920} className="hidden" aria-hidden="true" />
 
             {recording && (
               <div className="absolute left-1/2 top-16 z-20 -translate-x-1/2 rounded-full px-3 py-1 text-[13px] font-bold" style={{ backgroundColor: SYSTEM, color: PAPER }}>● {fmt(seconds)}</div>
@@ -300,9 +405,13 @@ export default function ShotFilmer({ shots = [], color = SYSTEM, ink = "#0A0A0B"
 
             <div className="mt-6 rounded-2xl p-4" style={{ backgroundColor: "#101216", border: "1px solid #23252b" }}>
               <div className="text-[13px] leading-snug" style={{ color: "#bcbcc2" }}>
-                Editing, caption burn-in and one-tap posting are coming next. For now, save your clips and finish the post in TikTok.
+                Editing, caption burn-in and one-tap posting are coming next. For now, save your clips to your photos and finish the post in TikTok.
               </div>
-              <button onClick={downloadAll} disabled={!capturedCount} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold disabled:opacity-40" style={{ border: "1px solid #3a3a42", color: PAPER }}><Download size={15} /> Save all clips</button>
+              <button onClick={saveToPhotos} disabled={!capturedCount || saving} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold disabled:opacity-40" style={{ backgroundColor: color, color: ink }}>
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {saving ? "Saving…" : "Save all to photos"}
+              </button>
+              <button onClick={downloadAll} disabled={!capturedCount} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-[13px] font-bold disabled:opacity-40" style={{ border: "1px solid #3a3a42", color: PAPER }}>Download files instead</button>
+              {saveMsg ? <div className="mt-2 text-[12px] leading-snug" style={{ color: "#8a8a90" }}>{saveMsg}</div> : null}
             </div>
 
             <div className="mt-3 flex gap-2">

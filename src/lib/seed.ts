@@ -16,17 +16,18 @@ const SOV_BRIEF = {
 };
 
 const SOV_COPPER_BRIEF = {
-  concept: "POV: nobody told me the mineral my hair color is made from was a thing you could take",
+  concept: "POV: my first greys sent me down a copper rabbit hole a friend started",
   shots: [
-    { title: "Shot 1", action: "Film yourself in the mirror, lifting a section of hair, catching the greys in the light.", onscreen: "nobody told me copper had anything to do with this", note: "Deadpan, in the mirror, no big reveal" },
-    { title: "Shot 2", action: "To camera: I was doing everything for my hair except the one mineral it's actually built from.", onscreen: "", note: "Dry, conversational" },
-    { title: "Shot 3", action: "Show the copper bottle, take the dropper, set it down. Simple.", onscreen: "copper hydrosol — 10 drops", note: "Support framing, never a fix" },
-    { title: "Shot 4", action: "Talk about staying consistent — hair, skin & nails routine for a few weeks.", onscreen: "week 6 of just being consistent", note: "How you feel about the routine, not a before/after" },
-    { title: "Shot 5", action: "Hold the bottle to camera and tap the yellow basket.", onscreen: "it's on my shop", note: "Point at the product link" },
+    { title: "Shot 1 — Hook", action: "Talk straight to camera, casual: \"So I just started noticing my first few grey hairs… And I remember hearing that if I pluck one, like five more grow back in its place — so now I'm scared to even touch it.\"", onscreen: "so I just found my first greys…", note: "Deadpan, no product yet, just you and the mirror energy" },
+    { title: "Shot 2 — Problem", action: "\"But then… to actually get my hair done? That's $150, $200 every few weeks. Forever. I can't.\"", onscreen: "$200 every few weeks. forever??", note: "Let the number land — this is the pain point" },
+    { title: "Shot 3 — Bridge", action: "\"So I was talking to my friends about it, and one of them told me to start taking a copper supplement? And I'm like — copper? For grey hair? But she explained it: copper's a mineral your body uses to make melanin. The pigment that actually gives your hair its color. And most of us are barely getting any.\"", onscreen: "copper… for grey hair??", note: "This is the 'wait, what?' turn — say it like you're still surprised" },
+    { title: "Shot 4 — Solution", action: "Pick up the bottle: \"So I looked it up and found this — Sovereign Copper. It's a bio-active copper the brand makes for hair, skin, and nails. Two ingredients, super absorbable, just a few drops a day.\"", onscreen: "Sovereign Copper — hair, skin & nails", note: "Show the dropper, keep it matter-of-fact" },
+    { title: "Shot 5 — Proof / compliance", action: "\"Now, I'm not saying it's gonna un-grey my hair. I'm just done ignoring my body and finally giving it the copper it's supposed to have.\"", onscreen: "not un-greying anything. just feeding my body.", note: "Say this line word-for-word — it's the safety line. No before/after, no reversal claim." },
+    { title: "Shot 6 — CTA", action: "\"It's on the TikTok shop right now — tap the orange cart. And seriously, go look up what copper does. That's the rabbit hole my friend sent me down.\"", onscreen: "tap the orange cart 🛒", note: "Point at the product link, send them down the rabbit hole" },
   ],
-  caption: "nobody told me copper had anything to do with this",
-  postDescription: "Adding copper to the hair, skin & nails routine.\nNot a magic fix — just the mineral my hair color is actually made from.",
-  hashtags: ["#greyhair", "#hairskinnails", "#coppermineral", "#beautyfromwithin", "#tiktokshopfinds", "#wellnessroutine"],
+  caption: "copper? for grey hair? okay I looked it up",
+  postDescription: "found out copper is the mineral your body uses to make hair pigment.\nnot un-greying anything — just done ignoring my body.\nit's on my shop, tap the orange cart.",
+  hashtags: ["#greyhair", "#copper", "#hairskinnails", "#melanin", "#tiktokshopfinds", "#wellnesstok"],
 };
 
 const DOUST_BRIEF = {
