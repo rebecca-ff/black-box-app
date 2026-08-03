@@ -1,0 +1,329 @@
+<style>
+  :root{
+    --ink:#16130F; --paper:#FBF8F3; --card:#FFFFFF; --rule:#E7DDCE;
+    --muted:#6E655B; --faint:#9A9086;
+    --orange:#FF5A1F; --orange-deep:#B23A0E; --orange-soft:#FDEEE4;
+    --magenta:#FE2C55; --magenta-deep:#C4123B;
+    --teal:#0E7C6B; --teal-deep:#0A5A4E;
+    --ground:var(--paper); --text:var(--ink); --heroground:var(--ink); --herotext:#F7F1E8;
+    --cardbg:var(--card); --line:var(--rule); --dim:var(--muted);
+    --disp:"Helvetica Neue",Arial,"Segoe UI",system-ui,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+    --mono:"SFMono-Regular",ui-monospace,"Menlo","Consolas",monospace;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --ground:#100E0B; --text:#EFE7DA; --card:#1B1713; --rule:#332C24;
+      --cardbg:#1B1713; --line:#332C24; --dim:#A79A8A; --faint:#7C7264;
+      --orange-soft:#2A1D14; --herotext:#F7F1E8; }
+  }
+  :root[data-theme="light"]{ --ground:#FBF8F3; --text:#16130F; --card:#FFFFFF; --rule:#E7DDCE;
+    --cardbg:#FFFFFF; --line:#E7DDCE; --dim:#6E655B; --faint:#9A9086; --orange-soft:#FDEEE4; }
+  :root[data-theme="dark"]{ --ground:#100E0B; --text:#EFE7DA; --card:#1B1713; --rule:#332C24;
+    --cardbg:#1B1713; --line:#332C24; --dim:#A79A8A; --faint:#7C7264; --orange-soft:#2A1D14; }
+
+  *{box-sizing:border-box;}
+  .oc{background:var(--ground);color:var(--text);font-family:var(--serif);
+    line-height:1.6;font-size:17px;-webkit-font-smoothing:antialiased;}
+  .oc *{margin:0;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px;}
+  .disp{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:1.02;text-wrap:balance;}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--orange-deep);font-weight:600;}
+  a{color:inherit;}
+  .btn{display:inline-flex;align-items:center;gap:.5em;font-family:var(--disp);font-weight:800;
+    font-size:15px;letter-spacing:-.01em;background:var(--orange);color:#fff;border:none;
+    padding:14px 24px;border-radius:999px;text-decoration:none;cursor:pointer;
+    transition:transform .15s ease,box-shadow .15s ease;box-shadow:0 6px 20px rgba(255,90,31,.28);}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,90,31,.38);}
+  .btn.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line);box-shadow:none;}
+  .btn.ghost:hover{border-color:var(--orange);}
+  :focus-visible{outline:3px solid var(--orange);outline-offset:3px;border-radius:6px;}
+
+  /* nav */
+  .nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--ground) 86%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px;}
+  .word{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;}
+  .dot{width:14px;height:14px;border-radius:50%;background:var(--orange);display:inline-block;box-shadow:0 0 0 3px var(--orange-soft);}
+  .navr{display:flex;align-items:center;gap:14px;}
+  .toggle{background:none;border:1.5px solid var(--line);color:var(--text);border-radius:999px;
+    width:38px;height:38px;font-size:15px;cursor:pointer;display:grid;place-items:center;}
+
+  /* hero */
+  .hero{background:var(--heroground);color:var(--herotext);position:relative;overflow:hidden;
+    padding:78px 0 88px;}
+  .hero .blob{position:absolute;width:640px;height:640px;border-radius:50%;right:-220px;top:-260px;
+    background:radial-gradient(circle at 32% 32%,var(--orange),var(--orange-deep));opacity:.9;filter:saturate(1.05);}
+  .hero .wrap{position:relative;z-index:2;}
+  .hero .eyebrow{color:var(--orange);}
+  .hero h1{font-size:clamp(40px,7vw,80px);margin:20px 0 0;max-width:12ch;}
+  .hero h1 .amt{color:var(--orange);}
+  .hero .sub{font-family:var(--serif);font-size:clamp(18px,2.3vw,23px);color:#D9CFC0;max-width:34ch;margin-top:22px;}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px;align-items:center;}
+  .hero .cta .note{font-family:var(--mono);font-size:12px;color:#B9AC9A;letter-spacing:.04em;}
+  .chips{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;}
+  .chip{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:7px 13px;border-radius:999px;
+    border:1px solid rgba(247,241,232,.24);color:#EDE2D2;}
+  .chip b{color:#fff;}
+
+  /* proof readout */
+  .readout{border-bottom:1px solid var(--line);padding:44px 0 8px;}
+  .readout .lab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:26px;}
+  .readout .lab .t{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);}
+  .grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+  .met{background:var(--cardbg);padding:22px 18px;}
+  .met .n{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;
+    font-size:clamp(24px,3.4vw,34px);letter-spacing:-.02em;color:var(--text);}
+  .met .n .u{color:var(--orange);}
+  .met .l{font-size:12.5px;color:var(--dim);margin-top:9px;line-height:1.4;font-family:var(--disp);font-weight:600;}
+  .readnote{font-family:var(--mono);font-size:12px;color:var(--faint);margin:16px 2px 0;letter-spacing:.02em;}
+
+  /* section */
+  section{padding:76px 0;}
+  .sechead{max-width:60ch;margin-bottom:36px;}
+  .sechead h2{font-size:clamp(28px,4.3vw,46px);margin-top:14px;}
+  .sechead p{font-family:var(--serif);font-size:19px;color:var(--dim);margin-top:16px;}
+  .rule{height:3px;width:54px;background:var(--orange);border-radius:2px;margin-top:4px;}
+
+  .pull{font-family:var(--disp);font-weight:800;font-size:clamp(24px,3.6vw,38px);letter-spacing:-.02em;
+    line-height:1.14;max-width:20ch;border-left:5px solid var(--orange);padding-left:24px;}
+  .pull .hl{color:var(--orange-deep);}
+  .two{display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:center;}
+
+  /* system grid */
+  .parts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .part{background:var(--cardbg);border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .part .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--orange-deep);text-transform:uppercase;}
+  .part h4{font-family:var(--disp);font-weight:800;font-size:17px;margin:10px 0 6px;letter-spacing:-.01em;}
+  .part p{font-size:14px;color:var(--dim);line-height:1.5;}
+
+  /* editions */
+  .eds{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch;}
+  .ed{background:var(--cardbg);border:1px solid var(--line);border-radius:18px;padding:28px;
+    display:flex;flex-direction:column;position:relative;overflow:hidden;
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+  .ed:hover{transform:translateY(-4px);box-shadow:0 18px 44px rgba(20,16,10,.12);border-color:var(--ac);}
+  .ed .bar{position:absolute;left:0;top:0;height:6px;width:100%;background:var(--ac);}
+  .ed .who{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ac);font-weight:600;margin-top:6px;}
+  .ed h3{font-family:var(--disp);font-weight:800;font-size:24px;letter-spacing:-.02em;margin:12px 0 4px;}
+  .ed .price{font-family:var(--disp);font-weight:800;font-size:40px;letter-spacing:-.03em;margin:14px 0 2px;}
+  .ed .price small{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--dim);letter-spacing:.04em;}
+  .ed ul{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:9px;}
+  .ed li{font-family:var(--serif);font-size:14.5px;color:var(--text);padding-left:24px;position:relative;line-height:1.45;}
+  .ed li::before{content:"";position:absolute;left:0;top:6px;width:12px;height:12px;border-radius:3px;
+    border:2px solid var(--ac);}
+  .ed .foot{margin-top:auto;padding-top:20px;}
+
+  /* vault */
+  .vault{background:var(--ink);color:#EFE7DA;border-radius:22px;padding:44px;position:relative;overflow:hidden;}
+  :root[data-theme="light"] .vault{background:var(--ink);}
+  .vault .eyebrow{color:var(--orange);}
+  .vault h2{font-family:var(--disp);font-weight:800;font-size:clamp(26px,3.6vw,38px);letter-spacing:-.02em;color:#F7F1E8;margin:12px 0 8px;}
+  .vlist{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(247,241,232,.14);
+    border:1px solid rgba(247,241,232,.14);border-radius:14px;overflow:hidden;margin-top:26px;}
+  .vitem{background:var(--ink);padding:18px 18px;}
+  .vitem .k{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:.06em;}
+  .vitem .t{font-family:var(--disp);font-weight:700;font-size:15px;color:#F7F1E8;margin-top:7px;letter-spacing:-.01em;}
+  .vitem .d{font-size:13px;color:#BDB0A0;margin-top:5px;line-height:1.45;}
+
+  /* offer */
+  .offer{background:var(--cardbg);border:1px solid var(--line);border-radius:22px;padding:44px;text-align:center;}
+  .offer h2{font-size:clamp(28px,4.4vw,44px);}
+  .offer p{font-family:var(--serif);font-size:19px;color:var(--dim);max-width:52ch;margin:16px auto 0;}
+  .offer .row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px;}
+  .offer .fine{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:22px;letter-spacing:.02em;}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;color:var(--dim);}
+  footer .fnote{font-family:var(--serif);font-size:14px;max-width:70ch;line-height:1.6;}
+  footer .meta{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--faint);margin-top:18px;text-transform:uppercase;}
+
+  .reveal{transition:opacity .6s ease,transform .6s ease;}
+  .js .reveal{opacity:0;transform:translateY(16px);}
+  .js .reveal.in{opacity:1;transform:none;}
+  @media (prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none;}
+    .btn,.ed{transition:none;}}
+
+  @media (max-width:900px){
+    .grid6{grid-template-columns:repeat(2,1fr);} .parts{grid-template-columns:repeat(2,1fr);}
+    .eds{grid-template-columns:1fr;} .vlist{grid-template-columns:1fr;} .two{grid-template-columns:1fr;gap:28px;}
+  }
+  @media (max-width:560px){ .grid6{grid-template-columns:1fr;} .parts{grid-template-columns:1fr;} }
+</style>
+
+<div class="oc">
+  <nav class="nav"><div class="wrap">
+    <div class="word"><span class="dot"></span>The Orange Cart Playbook</div>
+    <div class="navr">
+      <a class="btn ghost" href="#editions">See editions</a>
+      <button class="toggle" id="themeBtn" aria-label="Toggle light and dark theme">◑</button>
+    </div>
+  </div></nav>
+
+  <header class="hero"><div class="blob" aria-hidden="true"></div><div class="wrap">
+    <p class="eyebrow">A TikTok Shop system — not a course</p>
+    <h1 class="disp">Ship a sample.<br>Get <span class="amt">~$18</span> back.<br>Every time.</h1>
+    <p class="sub">That number held nearly identical across two brands in two unrelated categories over six months.
+      When the same input returns the same output no matter what you sell, you don't have a lucky video — you have a machine.</p>
+    <div class="chips">
+      <span class="chip">Category A: <b>wellness</b></span>
+      <span class="chip">Category B: <b>plant care</b></span>
+      <span class="chip">Same engine → <b>~$18 / sample</b></span>
+    </div>
+    <div class="cta">
+      <a class="btn" href="#offer">Get the bundle</a>
+      <span class="note">3 editions · Brand · Creator · Agency</span>
+    </div>
+  </div></header>
+
+  <section class="readout" style="padding-bottom:0"><div class="wrap">
+    <div class="lab reveal"><span class="t">Portfolio readout — 6 months, 2 shops</span></div>
+    <div class="grid6 reveal">
+      <div class="met"><div class="n">$65K<span class="u">+</span></div><div class="l">GMV across both shops</div></div>
+      <div class="met"><div class="n">3.4M<span class="u">+</span></div><div class="l">Organic video views</div></div>
+      <div class="met"><div class="n">~80<span class="u">%</span></div><div class="l">Of GMV from affiliates</div></div>
+      <div class="met"><div class="n">2,000<span class="u">+</span></div><div class="l">Creators activated</div></div>
+      <div class="met"><div class="n">~3,000</div><div class="l">Samples shipped</div></div>
+      <div class="met"><div class="n">500K<span class="u">+</span></div><div class="l">Creator DMs sent</div></div>
+    </div>
+    <p class="readnote">Figures rounded from a real 6-month TikTok Shop portfolio. Exact revenue and brand names withheld by design — the point is that the numbers repeat, not who earned them.</p>
+  </div></section>
+
+  <section><div class="wrap two">
+    <div class="reveal">
+      <p class="eyebrow">The shift</p>
+      <div class="pull disp">Stop trying to go viral.<br><span class="hl">Build the machine</span> instead.</div>
+    </div>
+    <div class="reveal" style="font-family:var(--serif);font-size:18px;color:var(--dim);">
+      <p style="margin-bottom:14px">Across the portfolio, roughly <b style="color:var(--text)">9 out of 10 creator videos sold nothing.</b>
+      It didn't matter — the tenth paid for all of them. Chasing one perfect video is buying a single lottery ticket.</p>
+      <p>The playbook is the opposite bet: put a hundred at-bats in a hundred feeds, screen who gets a sample,
+      hand every creator a script built to convert, and scale only what the market already voted for.</p>
+    </div>
+  </div></section>
+
+  <section style="padding-top:0"><div class="wrap">
+    <div class="sechead reveal"><p class="eyebrow">What's inside</p><h2 class="disp">The eight-part system</h2>
+      <div class="rule"></div>
+      <p>Every part is one gear in the same engine — the exact system that ran across both shops.</p></div>
+    <div class="parts">
+      <div class="part reveal"><div class="k">The model</div><h4>The volume engine</h4><p>Why affiliate-first beats brand-account posting — and the portfolio math behind it.</p></div>
+      <div class="part reveal"><div class="k">The copy</div><h4>The content framework</h4><p>Hook → Problem → Solution → Proof → CTA, plus the 7-pillar weekly rotation.</p></div>
+      <div class="part reveal"><div class="k">The copy</div><h4>The Hook Lab</h4><p>Proven hook patterns, format pairings, and the customer-language mining method.</p></div>
+      <div class="part reveal"><div class="k">The growth</div><h4>The affiliate engine</h4><p>Find, screen &amp; fuel creators — the funnel that was ~80% of the money.</p></div>
+      <div class="part reveal"><div class="k">Safety</div><h4>Compliance &amp; trust</h4><p>Make bold claims without getting the ad pulled. The say-this-not-that line.</p></div>
+      <div class="part reveal"><div class="k">Ops</div><h4>The production line</h4><p>Turn 10 scripts into 10 finished videos in an afternoon — then scale the winners.</p></div>
+      <div class="part reveal"><div class="k">Ops</div><h4>CX &amp; reviews</h4><p>Turn reviews and complaints into public social proof, inside the character limit.</p></div>
+      <div class="part reveal"><div class="k">The plan</div><h4>Your first 90 days</h4><p>A dated rollout — tailored to each edition — from first samples to a self-running cadence.</p></div>
+    </div>
+  </div></section>
+
+  <section id="editions" style="padding-top:0"><div class="wrap">
+    <div class="sechead reveal"><p class="eyebrow">Three editions</p><h2 class="disp">Same engine, built for who you are</h2>
+      <div class="rule"></div>
+      <p>The system is shared. Each edition adds a tailored "apply it to you" chapter, a 90-day plan, and the offer that fits your seat.</p></div>
+    <div class="eds">
+      <div class="ed reveal" style="--ac:var(--orange)"><div class="bar"></div>
+        <div class="who">Brand &amp; Founder</div>
+        <h3 class="disp">You own the product.</h3>
+        <div class="price disp">$197 <small>edition value</small></div>
+        <ul>
+          <li>Turn your sample budget into a media buy with a known return</li>
+          <li>Set commission against your real margins</li>
+          <li>Build an affiliate roster you own</li>
+          <li>The founder's four levers + a 90-day rollout</li>
+        </ul>
+        <div class="foot"><a class="btn" href="#offer" style="background:var(--orange)">Get the Brand Edition</a></div>
+      </div>
+      <div class="ed reveal" style="--ac:var(--magenta)"><div class="bar"></div>
+        <div class="who">Creator</div>
+        <h3 class="disp">Get samples. Get paid.</h3>
+        <div class="price disp">$47 <small>edition value</small></div>
+        <ul>
+          <li>Get approved for free product — on purpose</li>
+          <li>Pick products that actually convert (so you earn)</li>
+          <li>Post volume on the framework the brands use</li>
+          <li>Turn your GMV into a résumé for bigger brands</li>
+        </ul>
+        <div class="foot"><a class="btn" href="#offer" style="background:var(--magenta);box-shadow:0 6px 20px rgba(254,44,85,.3)">Get the Creator Edition</a></div>
+      </div>
+      <div class="ed reveal" style="--ac:var(--teal)"><div class="bar"></div>
+        <div class="who">Agency &amp; Operator</div>
+        <h3 class="disp">Run it for every client.</h3>
+        <div class="price disp">$497 <small>edition value</small></div>
+        <ul>
+          <li>Turn the engine into a productized service</li>
+          <li>Roles, SOPs &amp; scorecards you can staff</li>
+          <li>Reporting that renews the retainer</li>
+          <li>Onboard a new client shop in 90 days</li>
+        </ul>
+        <div class="foot"><a class="btn" href="#offer" style="background:var(--teal);box-shadow:0 6px 20px rgba(14,124,107,.3)">Get the Agency Edition</a></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section style="padding-top:0"><div class="wrap">
+    <div class="vault reveal">
+      <p class="eyebrow">Included with every edition</p>
+      <h2 class="disp">The Vault — nine plug-and-play tools</h2>
+      <p style="font-family:var(--serif);font-size:18px;color:#D3C6B6;max-width:56ch;margin-top:8px">
+        The playbook is the thinking. The Vault is the doing — every system ships as a template you use today.</p>
+      <div class="vlist">
+        <div class="vitem"><div class="k">01</div><div class="t">Weekly Content Calendar</div><div class="d">The 7-pillar rotation as a fill-in planner.</div></div>
+        <div class="vitem"><div class="k">02</div><div class="t">Hook Library</div><div class="d">50+ hook skeletons by pattern &amp; awareness stage.</div></div>
+        <div class="vitem"><div class="k">03</div><div class="t">Shot-by-Shot Brief</div><div class="d">The one-pager you hand every creator.</div></div>
+        <div class="vitem"><div class="k">04</div><div class="t">Affiliate Scorecard</div><div class="d">Score creators → auto approve / review / reject.</div></div>
+        <div class="vitem"><div class="k">05</div><div class="t">Sample → Sale Forecaster</div><div class="d">Plan your sample budget from GMV-per-sample.</div></div>
+        <div class="vitem"><div class="k">06</div><div class="t">Campaign Tracker</div><div class="d">Computes your real GMV-per-sample as you go.</div></div>
+        <div class="vitem"><div class="k">07</div><div class="t">Compliance Checklist</div><div class="d">Run it on every script before it ships.</div></div>
+        <div class="vitem"><div class="k">08</div><div class="t">Outreach Scripts</div><div class="d">Copy-paste DMs that fill the funnel.</div></div>
+        <div class="vitem"><div class="k">09</div><div class="t">CX Response Bank</div><div class="d">Ready replies under the 150-char limit.</div></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section id="offer" style="padding-top:0"><div class="wrap">
+    <div class="offer reveal">
+      <p class="eyebrow">The bundle</p>
+      <h2 class="disp">Your edition + the full Vault.</h2>
+      <p>Pick the edition for your seat — Brand, Creator, or Agency — and get the complete playbook plus all nine
+        Vault templates. One system, proven across two categories, ready to run on yours.</p>
+      <div class="row">
+        <a class="btn" href="#editions">Choose your edition</a>
+        <a class="btn ghost" href="#top">Back to the top</a>
+      </div>
+      <p class="fine">Single-buyer license · use it on your own shops &amp; clients · not for resale or redistribution.</p>
+    </div>
+  </div></section>
+
+  <footer><div class="wrap">
+    <p class="fnote"><b>An honest word on the numbers.</b> Every figure here is rounded or ranged from a real
+      6-month TikTok Shop portfolio (two brands, two unrelated categories). No exact revenue is published and no
+      brand is named. Compliance guidance is general operating experience, not legal advice — confirm claims for
+      your product and market with qualified counsel or current platform policy.</p>
+    <p class="meta">The Orange Cart Playbook · Brand · Creator · Agency · + The Vault</p>
+  </div></footer>
+</div>
+
+<script>
+  (function(){
+    document.documentElement.classList.add('js');
+    var btn=document.getElementById('themeBtn');
+    function cur(){var r=document.documentElement;
+      if(r.getAttribute('data-theme'))return r.getAttribute('data-theme');
+      return window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+    btn&&btn.addEventListener('click',function(){
+      var next=cur()==='dark'?'light':'dark';
+      document.documentElement.setAttribute('data-theme',next);
+      btn.textContent=next==='dark'?'◐':'◑';
+    });
+    var els=document.querySelectorAll('.reveal');
+    if('IntersectionObserver'in window){
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.14});
+      els.forEach(function(el){io.observe(el);});
+    } else { els.forEach(function(el){el.classList.add('in');}); }
+  })();
+</script>

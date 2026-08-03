@@ -5,5 +5,8 @@
       "path": "/api/hooks/refresh?category=Wellness",
       "schedule": "0 8 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/orange-cart", "destination": "/orange-cart/index.html" }
   ]
 }
